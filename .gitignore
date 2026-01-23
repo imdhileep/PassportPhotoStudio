@@ -1,0 +1,17 @@
+node_modules
+apps/web/node_modules
+apps/server/node_modules
+packages/ai/node_modules
+frontend/node_modules
+backend/__pycache__
+backend/.venv
+backend/venv
+backend/.env
+.env
+.DS_Store
+Thumbs.db
+data
+*.sqlite
+*.db
+*.pid
+*.log

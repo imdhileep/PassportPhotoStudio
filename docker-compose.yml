@@ -1,0 +1,117 @@
+version: "3.9"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: homesnapshare-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-homesnapshare}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homesnapshare}
+      POSTGRES_DB: ${POSTGRES_DB:-homesnapshare}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homesnapshare} -d ${POSTGRES_DB:-homesnapshare}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: homesnapshare-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+    container_name: homesnapshare-api
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://homesnapshare:homesnapshare@db:5432/homesnapshare}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MEDIA_ROOT: ${MEDIA_ROOT:-/data/media}
+      THUMB_ROOT: ${THUMB_ROOT:-/data/thumbs}
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    ports:
+      - "18000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: ./backend
+    container_name: homesnapshare-worker
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://homesnapshare:homesnapshare@db:5432/homesnapshare}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MEDIA_ROOT: ${MEDIA_ROOT:-/data/media}
+      THUMB_ROOT: ${THUMB_ROOT:-/data/thumbs}
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["celery", "-A", "app.worker", "worker", "--loglevel=INFO"]
+
+  importer:
+    build:
+      context: ./backend
+    container_name: homesnapshare-importer
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://homesnapshare:homesnapshare@db:5432/homesnapshare}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MEDIA_ROOT: ${MEDIA_ROOT:-/data/media}
+      THUMB_ROOT: ${THUMB_ROOT:-/data/thumbs}
+      IMPORT_ROOT: ${IMPORT_ROOT:-/data/import}
+      IMPORTER_ENABLED: ${IMPORTER_ENABLED:-true}
+      IMPORT_INTERVAL_SECONDS: ${IMPORT_INTERVAL_SECONDS:-10}
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["python", "-m", "app.scripts.watch_importer"]
+
+  frontend:
+    image: node:20
+    container_name: homesnapshare-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: ["npm", "run", "dev", "--", "--host"]
+
+volumes:
+  frontend_node_modules:
