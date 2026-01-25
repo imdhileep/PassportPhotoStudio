@@ -202,6 +202,12 @@ export default function App() {
   const effectiveEdgeIntensity = debouncedEdgeIntensity + edgePresetSettings.edgeIntensityBoost;
   const maxStep = inputUrl ? 6 : cameraActive ? 2 : 1;
   const activeStep = currentStep;
+  const adMessages = [
+    "Ad space will appear here after approval.",
+    "Sponsored content will rotate here after approval.",
+    "Thanks for supporting Passport Photo Studio."
+  ];
+  const adMessage = adMessages[(currentStep - 1) % adMessages.length];
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
   const warningIds = new Set([...displayWarnings, ...displayLightingWarnings].map((warning) => warning.id));
@@ -1428,6 +1434,20 @@ export default function App() {
             className="flex flex-col gap-6"
           >
             {outputPreviewCard}
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Sponsored</CardTitle>
+                  <CardDescription>Advertisement</CardDescription>
+                </div>
+              </CardHeader>
+              <div
+                key={`ad-slot-${currentStep}`}
+                className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-center text-xs text-slate-400"
+              >
+                {adMessage}
+              </div>
+            </Card>
             <Card>
               <CardHeader>
                 <div>
