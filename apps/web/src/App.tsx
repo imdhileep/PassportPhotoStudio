@@ -134,6 +134,8 @@ export default function App() {
   const [liveGuide, setLiveGuide] = useState<LiveGuide | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [liveFps, setLiveFps] = useState(0);
+  const [exportCredits, setExportCredits] = useState(0);
+  const [paymentBusy, setPaymentBusy] = useState(false);
 
   const [modelStatus, setModelStatus] = useState<ModelStatus>({
     ready: false,
@@ -268,6 +270,32 @@ export default function App() {
         URL.revokeObjectURL(outputUrlRef.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    const paid = params.get("paid");
+    if (!sessionId || paid !== "1") return;
+    const verify = async () => {
+      if (!appConfig.serverEnabled) return;
+      try {
+        const res = await fetch(`${appConfig.serverUrl}/checkout/verify?session_id=${sessionId}`);
+        const data = await res.json();
+        if (data?.paid) {
+          setExportCredits((prev) => prev + 1);
+        } else {
+          setErrorMessages((prev) => [...prev, "Payment not confirmed. Try again."]);
+        }
+      } catch (error) {
+        console.error("Payment verification failed", error);
+        setErrorMessages((prev) => [...prev, "Payment verification failed. Try again."]);
+      } finally {
+        const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+        window.history.replaceState({}, "", cleanUrl);
+      }
+    };
+    verify();
   }, []);
 
   useEffect(() => {
@@ -698,6 +726,48 @@ export default function App() {
     event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
+  const requestExportCredit = async () => {
+    if (!appConfig.serverEnabled || !appConfig.stripePriceId) {
+      setErrorMessages((prev) => [...prev, "Payments are not configured yet."]);
+      return false;
+    }
+    setPaymentBusy(true);
+    try {
+      const successUrl = `${window.location.origin}${window.location.pathname}?paid=1&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = window.location.href;
+      const res = await fetch(`${appConfig.serverUrl}/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priceId: appConfig.stripePriceId,
+          successUrl,
+          cancelUrl
+        })
+      });
+      if (!res.ok) throw new Error("Checkout failed");
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+        return false;
+      }
+      throw new Error("Checkout failed");
+    } catch (error) {
+      console.error("Checkout error", error);
+      setErrorMessages((prev) => [...prev, "Checkout failed. Try again."]);
+      return false;
+    } finally {
+      setPaymentBusy(false);
+    }
+  };
+
+  const ensureExportCredit = async () => {
+    if (exportCredits > 0) {
+      setExportCredits((prev) => Math.max(0, prev - 1));
+      return true;
+    }
+    return await requestExportCredit();
+  };
+
   const outputPreviewCard = (
     <Card>
       <CardHeader>
@@ -761,6 +831,7 @@ export default function App() {
   );
 
   const handleExport = async (format: "png" | "jpeg") => {
+    if (!(await ensureExportCredit())) return;
     const canvas = processedCanvasRef.current;
     if (!canvas) return;
     let standardOutput = renderPassport(canvas, standard, qualityMap[qualityMode].ppi);
@@ -773,6 +844,7 @@ export default function App() {
   };
 
   const handleExportSheet = async () => {
+    if (!(await ensureExportCredit())) return;
     const canvas = processedCanvasRef.current;
     if (!canvas) return;
     const sheet = renderSheet(canvas, standard, qualityMap[qualityMode].ppi);
@@ -1356,18 +1428,18 @@ export default function App() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex flex-wrap gap-2">
                         {backgroundColor === "transparent" ? (
-                          <Button variant="outline" onClick={() => handleExport("png")}>
+                          <Button variant="outline" onClick={() => handleExport("png")} disabled={paymentBusy}>
                             Export Transparent PNG
                           </Button>
                         ) : (
-                          <Button variant="outline" onClick={() => handleExport("png")}>
+                          <Button variant="outline" onClick={() => handleExport("png")} disabled={paymentBusy}>
                             Export PNG
                           </Button>
                         )}
-                        <Button variant="outline" onClick={() => handleExport("jpeg")}>
+                        <Button variant="outline" onClick={() => handleExport("jpeg")} disabled={paymentBusy}>
                           Export JPG
                         </Button>
-                        <Button variant="accent" onClick={handleExportSheet}>
+                        <Button variant="accent" onClick={handleExportSheet} disabled={paymentBusy}>
                           4x6 Sheet
                         </Button>
                         {appConfig.serverEnabled && (
@@ -1376,6 +1448,11 @@ export default function App() {
                           </Button>
                         )}
                       </div>
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {appConfig.stripePriceId
+                        ? `Payment: $0.50 per export. Credits available: ${exportCredits}.`
+                        : "Payment: not configured."}
                     </div>
 
                     {shareLink && (
@@ -1472,13 +1549,13 @@ export default function App() {
         {currentStep === 6 && (
           <div className="sticky bottom-4 mx-auto mb-8 flex max-w-6xl justify-center px-6 lg:hidden">
             <div className="glass flex w-full max-w-md flex-wrap items-center justify-center gap-3 rounded-2xl px-4 py-3">
-              <Button variant="outline" onClick={() => handleExport("png")}>
+              <Button variant="outline" onClick={() => handleExport("png")} disabled={paymentBusy}>
                 {backgroundColor === "transparent" ? "PNG (Transparent)" : "PNG"}
               </Button>
-              <Button variant="outline" onClick={() => handleExport("jpeg")}>
+              <Button variant="outline" onClick={() => handleExport("jpeg")} disabled={paymentBusy}>
                 JPG
               </Button>
-              <Button variant="accent" onClick={handleExportSheet}>
+              <Button variant="accent" onClick={handleExportSheet} disabled={paymentBusy}>
                 4x6
               </Button>
             </div>

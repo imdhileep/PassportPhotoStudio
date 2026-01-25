@@ -6,6 +6,7 @@ import fs from "fs";
 import { nanoid } from "nanoid";
 import Database from "better-sqlite3";
 import sharp from "sharp";
+import Stripe from "stripe";
 
 const app = express();
 const port = Number(process.env.PORT || 4310);
@@ -13,6 +14,8 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 const dataDir = process.env.DATA_DIR || path.join(repoRoot, "data");
 const exportDir = path.join(dataDir, "exports");
 const dbPath = path.join(dataDir, "exports.db");
+const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
+const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: "2024-06-20" }) : null;
 
 fs.mkdirSync(exportDir, { recursive: true });
 const db = new Database(dbPath);
@@ -48,6 +51,50 @@ app.post("/exports", upload.single("file"), async (req, res) => {
   } catch (error) {
     console.error("Export conversion failed", error);
     res.status(500).json({ error: "Conversion failed" });
+  }
+});
+
+app.post("/checkout", async (req, res) => {
+  if (!stripe) {
+    res.status(500).json({ error: "Stripe not configured" });
+    return;
+  }
+  const { priceId, successUrl, cancelUrl } = req.body ?? {};
+  if (!priceId || !successUrl || !cancelUrl) {
+    res.status(400).json({ error: "Missing checkout parameters" });
+    return;
+  }
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      automatic_tax: { enabled: true }
+    });
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error("Checkout create failed", error);
+    res.status(500).json({ error: "Checkout failed" });
+  }
+});
+
+app.get("/checkout/verify", async (req, res) => {
+  if (!stripe) {
+    res.status(500).json({ error: "Stripe not configured" });
+    return;
+  }
+  const sessionId = req.query.session_id;
+  if (!sessionId || typeof sessionId !== "string") {
+    res.status(400).json({ error: "Missing session_id" });
+    return;
+  }
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    res.json({ paid: session.payment_status === "paid" });
+  } catch (error) {
+    console.error("Checkout verify failed", error);
+    res.status(500).json({ error: "Verification failed" });
   }
 });
 
