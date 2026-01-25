@@ -65,6 +65,16 @@ const transparentSwatch = {
   backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px"
 };
 
+const creatorProfile = {
+  name: "Dhileep Kumar Pagadala",
+  tagline: "No Studio. No Hassle. Perfect Photo.",
+  linkedin: "https://www.linkedin.com/in/dhileepkumarpagadala/",
+  github: "https://github.com/imdhileep",
+  email: "dhileep.dk@gmail.com"
+};
+
+const buildStamp = import.meta.env.VITE_BUILD_STAMP || "dev";
+
 const initialDrag: DragState = { active: false, startX: 0, startY: 0, originX: 0, originY: 0 };
 
 const warningCard = (warning: WarningItem) => (
@@ -99,6 +109,13 @@ export default function App() {
   const [edgePreset, setEdgePreset] = useLocalStorage<"balanced" | "hair" | "clean">("pps_edge_preset", "balanced");
   const [haloTrim, setHaloTrim] = useLocalStorage<number>("pps_halo_trim", 1);
   const [matteTightness, setMatteTightness] = useLocalStorage<number>("pps_matte_tightness", 35);
+  const [filterPreset, setFilterPreset] = useLocalStorage<
+    "standard" | "studio" | "neutral" | "vivid" | "soft" | "warm" | "cool" | "custom"
+  >("pps_filter_preset", "standard");
+  const [brightness, setBrightness] = useLocalStorage<number>("pps_brightness", 100);
+  const [contrast, setContrast] = useLocalStorage<number>("pps_contrast", 100);
+  const [saturation, setSaturation] = useLocalStorage<number>("pps_saturation", 100);
+  const [hue, setHue] = useLocalStorage<number>("pps_hue", 0);
   const [autoCrop, setAutoCrop] = useLocalStorage<boolean>("pps_auto_crop", true);
   const [manualAdjust, setManualAdjust] = useLocalStorage<boolean>("pps_manual_adjust", false);
   const [showBefore, setShowBefore] = useLocalStorage<boolean>("pps_show_before", false);
@@ -108,6 +125,7 @@ export default function App() {
   const [capturedFromCamera, setCapturedFromCamera] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [theme, setTheme] = useLocalStorage<"dark" | "light">("pps_theme", "dark");
 
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
   const [cropZoom, setCropZoom] = useState(1);
@@ -160,10 +178,23 @@ export default function App() {
   const debouncedBackground = useDebouncedValue(backgroundColor, 120);
   const debouncedHaloTrim = useDebouncedValue(haloTrim, 150);
   const debouncedMatteTightness = useDebouncedValue(matteTightness, 150);
+  const debouncedBrightness = useDebouncedValue(brightness, 150);
+  const debouncedContrast = useDebouncedValue(contrast, 150);
+  const debouncedSaturation = useDebouncedValue(saturation, 150);
+  const debouncedHue = useDebouncedValue(hue, 150);
   const edgePresetConfig = {
     balanced: { label: "Balanced", trim: 1, featherBoost: 0, strengthBoost: 0, edgeIntensityBoost: 0 },
     hair: { label: "Hair detail", trim: 0, featherBoost: 2, strengthBoost: 0, edgeIntensityBoost: 1 },
     clean: { label: "Clean cut", trim: 2, featherBoost: 1, strengthBoost: 1, edgeIntensityBoost: 3 }
+  } as const;
+  const filterPresets = {
+    standard: { label: "Standard", brightness: 100, contrast: 100, saturation: 100, hue: 0 },
+    studio: { label: "Studio", brightness: 104, contrast: 108, saturation: 98, hue: 0 },
+    neutral: { label: "Neutral", brightness: 100, contrast: 100, saturation: 92, hue: 0 },
+    vivid: { label: "Vivid", brightness: 102, contrast: 112, saturation: 118, hue: 0 },
+    soft: { label: "Soft", brightness: 105, contrast: 92, saturation: 90, hue: 0 },
+    warm: { label: "Warm", brightness: 102, contrast: 104, saturation: 105, hue: 8 },
+    cool: { label: "Cool", brightness: 100, contrast: 102, saturation: 96, hue: -8 }
   } as const;
   const edgePresetSettings = edgePresetConfig[edgePreset];
   const effectiveFeather = Math.max(0, debouncedFeather + edgePresetSettings.featherBoost);
@@ -238,6 +269,11 @@ export default function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  }, [theme]);
 
   useEffect(() => {
     if (showBefore) return;
@@ -337,6 +373,10 @@ export default function App() {
           edgeTrim: edgePresetSettings.trim,
           haloTrim: debouncedHaloTrim,
           matteTightness: debouncedMatteTightness,
+          brightness: debouncedBrightness,
+          contrast: debouncedContrast,
+          saturation: debouncedSaturation,
+          hue: debouncedHue,
           autoCrop,
           manualAdjust,
           cropOffset,
@@ -384,6 +424,10 @@ export default function App() {
     edgePreset,
     debouncedHaloTrim,
     debouncedMatteTightness,
+    debouncedBrightness,
+    debouncedContrast,
+    debouncedSaturation,
+    debouncedHue,
     autoCrop,
     manualAdjust,
     cropOffset,
@@ -430,6 +474,10 @@ export default function App() {
           edgeTrim: edgePresetSettings.trim,
           haloTrim: debouncedHaloTrim,
           matteTightness: debouncedMatteTightness,
+          brightness: debouncedBrightness,
+          contrast: debouncedContrast,
+          saturation: debouncedSaturation,
+          hue: debouncedHue,
           autoCrop,
           manualAdjust,
           cropOffset,
@@ -486,6 +534,10 @@ export default function App() {
     edgePreset,
     debouncedHaloTrim,
     debouncedMatteTightness,
+    debouncedBrightness,
+    debouncedContrast,
+    debouncedSaturation,
+    debouncedHue,
     autoCrop,
     manualAdjust,
     cropOffset,
@@ -765,11 +817,17 @@ export default function App() {
         <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Passport Photo Studio</p>
-            <h1 className="font-display text-3xl font-semibold">Compliance-ready photos in minutes</h1>
+            <h1 className="font-display text-3xl font-semibold text-gradient">{creatorProfile.tagline}</h1>
             <p className="text-sm text-slate-300">Offline-capable, privacy-first, and tuned for official standards.</p>
           </div>
           <div className="flex items-center gap-3">
             <Badge>{standard.label}</Badge>
+            <Button
+              variant="outline"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? "Light mode" : "Dark mode"}
+            </Button>
             <Button variant="outline" onClick={handleReset}>
               Reset
             </Button>
@@ -1174,10 +1232,125 @@ export default function App() {
                 <Card>
                   <CardHeader>
                     <div>
+                      <CardTitle>Color & Filters</CardTitle>
+                      <CardDescription>Fine-tune tone before export.</CardDescription>
+                    </div>
+                    <Badge>Step 5</Badge>
+                  </CardHeader>
+                  <div className="grid gap-4">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-400">Preset</p>
+                      <select
+                        value={filterPreset}
+                        onChange={(event) => {
+                          const next = event.target.value as keyof typeof filterPresets;
+                          setFilterPreset(next);
+                          const preset = filterPresets[next];
+                          setBrightness(preset.brightness);
+                          setContrast(preset.contrast);
+                          setSaturation(preset.saturation);
+                          setHue(preset.hue);
+                        }}
+                        className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                      >
+                        {Object.entries(filterPresets).map(([key, preset]) => (
+                          <option key={key} value={key} className="bg-slate-900">
+                            {preset.label}
+                          </option>
+                        ))}
+                        <option value="custom" className="bg-slate-900">
+                          Custom
+                        </option>
+                      </select>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">Brightness</p>
+                          <span className="text-xs text-slate-400">{brightness}%</span>
+                        </div>
+                        <Slider
+                          value={[brightness]}
+                          min={70}
+                          max={130}
+                          step={1}
+                          onValueChange={([val]) => {
+                            setBrightness(val);
+                            setFilterPreset("custom");
+                          }}
+                        />
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">Contrast</p>
+                          <span className="text-xs text-slate-400">{contrast}%</span>
+                        </div>
+                        <Slider
+                          value={[contrast]}
+                          min={70}
+                          max={130}
+                          step={1}
+                          onValueChange={([val]) => {
+                            setContrast(val);
+                            setFilterPreset("custom");
+                          }}
+                        />
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">Saturation</p>
+                          <span className="text-xs text-slate-400">{saturation}%</span>
+                        </div>
+                        <Slider
+                          value={[saturation]}
+                          min={70}
+                          max={140}
+                          step={1}
+                          onValueChange={([val]) => {
+                            setSaturation(val);
+                            setFilterPreset("custom");
+                          }}
+                        />
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold">Hue</p>
+                          <span className="text-xs text-slate-400">{hue}°</span>
+                        </div>
+                        <Slider
+                          value={[hue]}
+                          min={-20}
+                          max={20}
+                          step={1}
+                          onValueChange={([val]) => {
+                            setHue(val);
+                            setFilterPreset("custom");
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+                <div className="flex items-center justify-between">
+                  <Button variant="ghost" onClick={() => setCurrentStep(4)}>
+                    Back
+                  </Button>
+                  <Button variant="accent" onClick={() => setCurrentStep(6)}>
+                    Next
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {currentStep === 6 && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <div>
                       <CardTitle>Export</CardTitle>
                       <CardDescription>Review compliance and export ready files.</CardDescription>
                     </div>
-                    <Badge>Step 5</Badge>
+                    <Badge>Step 6</Badge>
                   </CardHeader>
                   <div className="grid gap-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1233,7 +1406,7 @@ export default function App() {
                   </div>
                 </Card>
                 <div className="flex items-center justify-between">
-                  <Button variant="ghost" onClick={() => setCurrentStep(4)}>
+                  <Button variant="ghost" onClick={() => setCurrentStep(5)}>
                     Back
                   </Button>
                 </div>
@@ -1296,7 +1469,7 @@ export default function App() {
             )}
           </motion.section>
         </main>
-        {currentStep === 5 && (
+        {currentStep === 6 && (
           <div className="sticky bottom-4 mx-auto mb-8 flex max-w-6xl justify-center px-6 lg:hidden">
             <div className="glass flex w-full max-w-md flex-wrap items-center justify-center gap-3 rounded-2xl px-4 py-3">
               <Button variant="outline" onClick={() => handleExport("png")}>
@@ -1311,6 +1484,42 @@ export default function App() {
             </div>
           </div>
         )}
+        <footer className="mt-10 border-t border-white/10 bg-slate-950/40">
+          <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Contact</p>
+              <p className="text-sm font-semibold text-white">{creatorProfile.name}</p>
+              <p className="text-xs text-slate-400">{creatorProfile.tagline}</p>
+            </div>
+            <div className="text-xs text-slate-400">
+              Build: {buildStamp}
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
+              <a
+                href={creatorProfile.linkedin}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+              >
+                LinkedIn
+              </a>
+              <a
+                href={creatorProfile.github}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+              >
+                GitHub
+              </a>
+              <a
+                href={`mailto:${creatorProfile.email}`}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+              >
+                {creatorProfile.email}
+              </a>
+            </div>
+          </div>
+        </footer>
         <canvas ref={canvasRef} className="hidden" />
       </div>
     </div>
@@ -1382,6 +1591,10 @@ const processImage = async ({
   edgeTrim,
   haloTrim,
   matteTightness,
+  brightness,
+  contrast,
+  saturation,
+  hue,
   autoCrop,
   manualAdjust,
   cropOffset,
@@ -1401,6 +1614,10 @@ const processImage = async ({
   edgeTrim?: number;
   haloTrim?: number;
   matteTightness?: number;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  hue: number;
   autoCrop: boolean;
   manualAdjust: boolean;
   cropOffset: { x: number; y: number };
@@ -1496,6 +1713,15 @@ const processImage = async ({
   }
   ctx.drawImage(personCanvas, 0, 0);
 
+  const filteredCanvas = document.createElement("canvas");
+  filteredCanvas.width = imageWidth;
+  filteredCanvas.height = imageHeight;
+  const filteredCtx = filteredCanvas.getContext("2d");
+  if (!filteredCtx) throw new Error("Canvas unavailable.");
+  filteredCtx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) hue-rotate(${hue}deg)`;
+  filteredCtx.drawImage(compositeCanvas, 0, 0);
+  filteredCtx.filter = "none";
+
   const detection = detectFace(bundle, workingImage);
   const landmarks = detection.faceLandmarks?.[0];
   const cropResult =
@@ -1508,7 +1734,7 @@ const processImage = async ({
   const crop = manualAdjust
     ? applyManualCrop(cropResult.crop, cropOffset, cropZoom, imageWidth, imageHeight)
     : cropResult.crop;
-  const output = cropCanvas(compositeCanvas, crop);
+  const output = cropCanvas(filteredCanvas, crop);
   return {
     canvas: output,
     warnings: [...backgroundWarnings, ...cropResult.warnings],
