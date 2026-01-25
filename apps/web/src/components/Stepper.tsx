@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-const steps = ["Camera", "Capture/Crop", "Background", "Refine", "Export"];
+const steps = ["Camera", "Capture/Crop", "Background", "Refine", "Color", "Export"];
 
 export const Stepper = ({ active = 1 }: { active?: number }) => (
   <div className="flex flex-wrap gap-2">
