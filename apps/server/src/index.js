@@ -10,7 +10,7 @@ import sharp from "sharp";
 const app = express();
 const port = Number(process.env.PORT || 4310);
 const repoRoot = path.resolve(process.cwd(), "..", "..");
-const dataDir = path.join(repoRoot, "data");
+const dataDir = process.env.DATA_DIR || path.join(repoRoot, "data");
 const exportDir = path.join(dataDir, "exports");
 const dbPath = path.join(dataDir, "exports.db");
 
