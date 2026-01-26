@@ -146,6 +146,8 @@ export default function App() {
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -1522,18 +1524,22 @@ export default function App() {
               Build: {buildStamp}
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
-              <a
-                href="#privacy"
+              <button
+                type="button"
+                aria-expanded={showPrivacy}
+                onClick={() => setShowPrivacy((prev) => !prev)}
                 className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
               >
                 Privacy Policy
-              </a>
-              <a
-                href="#terms"
+              </button>
+              <button
+                type="button"
+                aria-expanded={showTerms}
+                onClick={() => setShowTerms((prev) => !prev)}
                 className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
               >
                 Terms & Conditions
-              </a>
+              </button>
               <a
                 href={creatorProfile.linkedin}
                 target="_blank"
@@ -1559,20 +1565,24 @@ export default function App() {
             </div>
           </div>
           <div className="mx-auto w-full max-w-6xl px-6 pb-6">
-            <div id="privacy" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
-              <p className="text-sm font-semibold text-white">Privacy Policy</p>
-              <p className="mt-2">
-                We process photos locally in your browser. We do not upload your images unless you explicitly use the share
-                feature. We store export history only when the optional server is enabled.
-              </p>
-            </div>
-            <div id="terms" className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
-              <p className="text-sm font-semibold text-white">Terms & Conditions</p>
-              <p className="mt-2">
-                This tool provides guidance for passport photos, but you are responsible for final compliance with local
-                regulations. Use at your own discretion.
-              </p>
-            </div>
+            {showPrivacy && (
+              <div id="privacy" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
+                <p className="text-sm font-semibold text-white">Privacy Policy</p>
+                <p className="mt-2">
+                  We process photos locally in your browser. We do not upload your images unless you explicitly use the share
+                  feature. We store export history only when the optional server is enabled.
+                </p>
+              </div>
+            )}
+            {showTerms && (
+              <div id="terms" className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
+                <p className="text-sm font-semibold text-white">Terms & Conditions</p>
+                <p className="mt-2">
+                  This tool provides guidance for passport photos, but you are responsible for final compliance with local
+                  regulations. Use at your own discretion.
+                </p>
+              </div>
+            )}
           </div>
         </footer>
         <canvas ref={canvasRef} className="hidden" />
