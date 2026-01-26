@@ -134,6 +134,10 @@ export default function App() {
   const [liveGuide, setLiveGuide] = useState<LiveGuide | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [liveFps, setLiveFps] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [supportsCamera, setSupportsCamera] = useState(true);
+  const [supportsFilters, setSupportsFilters] = useState(true);
+  const [supportsWebgl, setSupportsWebgl] = useState(true);
 
   const [modelStatus, setModelStatus] = useState<ModelStatus>({
     ready: false,
@@ -295,6 +299,22 @@ export default function App() {
     const sourceUrl = outputUrl ?? livePreviewUrl;
     if (!sourceUrl) return;
   }, [outputUrl, livePreviewUrl, showBefore]);
+
+  useEffect(() => {
+    const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const updateMotion = () => setPrefersReducedMotion(!!media?.matches);
+    updateMotion();
+    media?.addEventListener?.("change", updateMotion);
+    const canvas = document.createElement("canvas");
+    const gl =
+      canvas.getContext("webgl") ||
+      canvas.getContext("experimental-webgl") ||
+      canvas.getContext("webgl2");
+    setSupportsWebgl(!!gl);
+    setSupportsCamera(!!navigator.mediaDevices?.getUserMedia);
+    setSupportsFilters(typeof CSS !== "undefined" && CSS.supports?.("filter", "brightness(100%)"));
+    return () => media?.removeEventListener?.("change", updateMotion);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -577,8 +597,16 @@ export default function App() {
       }
       setFacingMode(mode);
       setLivePreview(true);
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera not supported");
+      }
+      const isSmall = window.matchMedia?.("(max-width: 640px)")?.matches;
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: mode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          facingMode: { ideal: mode },
+          width: { ideal: isSmall ? 960 : 1280 },
+          height: { ideal: isSmall ? 720 : 720 }
+        },
         audio: false
       });
       streamRef.current = stream;
@@ -782,6 +810,9 @@ export default function App() {
     if (format === "jpeg" && backgroundColor === "transparent") {
       standardOutput = flattenCanvas(standardOutput, "#ffffff");
     }
+    if (!supportsFilters) {
+      setErrorMessages((prev) => [...prev, "Image filters are not supported in this browser."]);
+    }
     const quality = format === "jpeg" ? qualityMap[qualityMode].jpg : 1;
     const blob = await toBlob(standardOutput, `image/${format}`, quality);
     downloadBlob(blob, `passport-${standard.id}.${format === "jpeg" ? "jpg" : "png"}`);
@@ -855,12 +886,22 @@ export default function App() {
         <div className="mx-auto max-w-6xl px-6 pb-6">
           <Stepper active={activeStep} maxStep={maxStep} onStepChange={setCurrentStep} />
         </div>
+        {!supportsCamera && (
+          <div className="mx-auto max-w-6xl px-6 pb-4 text-sm text-amber-200">
+            Camera access isn’t supported in this browser. Please upload a photo instead.
+          </div>
+        )}
+        {!supportsWebgl && (
+          <div className="mx-auto max-w-6xl px-6 pb-4 text-sm text-amber-200">
+            WebGL is unavailable, so AI processing will use a slower CPU path.
+          </div>
+        )}
 
         <main className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-6 pb-12 lg:grid-cols-[1.05fr_0.95fr]">
           <motion.section
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+            animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+            transition={prefersReducedMotion ? undefined : { duration: 0.4 }}
             className="flex flex-col gap-6"
           >
             {currentStep === 1 && (
@@ -1434,9 +1475,9 @@ export default function App() {
           </motion.section>
 
           <motion.section
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.05 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+            animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+            transition={prefersReducedMotion ? undefined : { duration: 0.4, delay: 0.05 }}
             className="flex flex-col gap-6"
           >
             {outputPreviewCard}
