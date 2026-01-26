@@ -832,8 +832,12 @@ export default function App() {
         <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Passport Photo Studio</p>
-            <h1 className="font-display text-3xl font-semibold text-gradient">{creatorProfile.tagline}</h1>
-            <p className="text-sm text-slate-300">Offline-capable, privacy-first, and tuned for official standards.</p>
+            <h1 className="font-display text-3xl font-semibold text-gradient">
+              Free Online Passport Photo Maker – Passport Photo Studio
+            </h1>
+            <p className="text-sm text-slate-300">
+              {creatorProfile.tagline} Offline-capable, privacy-first, and tuned for official standards.
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Badge>{standard.label}</Badge>
@@ -1498,6 +1502,63 @@ export default function App() {
             )}
           </motion.section>
         </main>
+        <section className="mx-auto w-full max-w-6xl px-6 pb-10 text-slate-200">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8">
+            <p className="text-sm text-slate-300">
+              Passport Photo Studio is a free tool to create passport-size photos at home. Upload your photo, align and
+              crop to the right size, and download instantly with no signup required.
+            </p>
+
+            <div className="mt-6 grid gap-6">
+              <div>
+                <h2 className="text-lg font-semibold text-white">How It Works</h2>
+                <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-300">
+                  <li>Capture from your camera or upload a photo.</li>
+                  <li>Remove the background and align the face guide.</li>
+                  <li>Crop to official passport sizes and export.</li>
+                </ol>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Supported Passport Photo Sizes</h2>
+                <p className="mt-2 text-sm text-slate-300">
+                  Generate photos for US passports (2x2 inches) and India passport size (35x45 mm), with flexible ratios
+                  for other countries.
+                </p>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Why Use Passport Photo Studio</h2>
+                <p className="mt-2 text-sm text-slate-300">
+                  Privacy-friendly processing keeps your images in the browser, no account needed, and the tool works on
+                  both mobile and desktop.
+                </p>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Take Passport Photo at Home</h2>
+                <p className="mt-2 text-sm text-slate-300">
+                  Stand in front of even lighting, keep your head straight, and use the face guide to align your eyes
+                  before capturing.
+                </p>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">FAQ</h2>
+                <div className="mt-2 space-y-3 text-sm text-slate-300">
+                  <div>
+                    <p className="font-semibold text-white">Is it free?</p>
+                    <p>Yes. You can create passport photos online for free without signing up.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">Are my photos stored on servers?</p>
+                    <p>Your photos stay in your browser unless you choose to share or export via the optional server.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">Will this be accepted for official submissions?</p>
+                    <p>We provide guidance and sizing tools, but always verify local submission requirements.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
         {currentStep === 6 && (
           <div className="sticky bottom-4 mx-auto mb-8 flex max-w-6xl justify-center px-6 lg:hidden">
             <div className="glass flex w-full max-w-md flex-wrap items-center justify-center gap-3 rounded-2xl px-4 py-3">

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://passport-photo-studio-web.vercel.app/sitemap.xml
