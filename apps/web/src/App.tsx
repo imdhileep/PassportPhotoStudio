@@ -1523,6 +1523,18 @@ export default function App() {
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
               <a
+                href="#privacy"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="#terms"
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+              >
+                Terms & Conditions
+              </a>
+              <a
                 href={creatorProfile.linkedin}
                 target="_blank"
                 rel="noreferrer"
@@ -1544,6 +1556,22 @@ export default function App() {
               >
                 {creatorProfile.email}
               </a>
+            </div>
+          </div>
+          <div className="mx-auto w-full max-w-6xl px-6 pb-6">
+            <div id="privacy" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
+              <p className="text-sm font-semibold text-white">Privacy Policy</p>
+              <p className="mt-2">
+                We process photos locally in your browser. We do not upload your images unless you explicitly use the share
+                feature. We store export history only when the optional server is enabled.
+              </p>
+            </div>
+            <div id="terms" className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
+              <p className="text-sm font-semibold text-white">Terms & Conditions</p>
+              <p className="mt-2">
+                This tool provides guidance for passport photos, but you are responsible for final compliance with local
+                regulations. Use at your own discretion.
+              </p>
             </div>
           </div>
         </footer>
