@@ -152,6 +152,7 @@ export default function App() {
   const [retryKey, setRetryKey] = useState(0);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showAdSense, setShowAdSense] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -214,6 +215,7 @@ export default function App() {
     "Thanks for supporting Passport Photo Studio."
   ];
   const adMessage = adMessages[(currentStep - 1) % adMessages.length];
+  const showAds = true;
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
   const warningIds = new Set([...displayWarnings, ...displayLightingWarnings].map((warning) => warning.id));
@@ -1484,20 +1486,6 @@ export default function App() {
             <Card>
               <CardHeader>
                 <div>
-                  <CardTitle>Sponsored</CardTitle>
-                  <CardDescription>Advertisement</CardDescription>
-                </div>
-              </CardHeader>
-              <div
-                key={`ad-slot-${currentStep}`}
-                className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-center text-xs text-slate-400"
-              >
-                {adMessage}
-              </div>
-            </Card>
-            <Card>
-              <CardHeader>
-                <div>
                   <CardTitle>Model Status</CardTitle>
                   <CardDescription>Offline assets and delegate selection.</CardDescription>
                 </div>
@@ -1598,6 +1586,22 @@ export default function App() {
                 </div>
               </div>
             </div>
+            {showAds && (
+              <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Sponsored</p>
+                    <p className="text-sm text-slate-300">Advertisement</p>
+                  </div>
+                </div>
+                <div
+                  key={`ad-slot-${currentStep}`}
+                  className="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-center text-xs text-slate-400"
+                >
+                  {adMessage}
+                </div>
+              </div>
+            )}
           </div>
         </section>
         {currentStep === 6 && (
@@ -1642,6 +1646,14 @@ export default function App() {
               >
                 Terms & Conditions
               </button>
+              <button
+                type="button"
+                aria-expanded={showAdSense}
+                onClick={() => setShowAdSense((prev) => !prev)}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+              >
+                AdSense Guide
+              </button>
               <a
                 href={creatorProfile.linkedin}
                 target="_blank"
@@ -1683,6 +1695,57 @@ export default function App() {
                   This tool provides guidance for passport photos, but you are responsible for final compliance with local
                   regulations. Use at your own discretion.
                 </p>
+              </div>
+            )}
+            {showAdSense && (
+              <div id="adsense" className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
+                <p className="text-sm font-semibold text-white">AdSense Approval Guide</p>
+                <div className="mt-2 space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-white">Clicks and impressions</p>
+                    <p>
+                      Avoid clicking your own ads or encouraging others to. Use Google Analytics to understand your traffic.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">Content guidelines</p>
+                    <p>
+                      You are responsible for all site content displayed alongside ads. Ensure it is original, relevant, and
+                      valuable to users, and avoid restricted content such as adult material, violence, or hate speech.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">Ad implementation</p>
+                    <p>
+                      Do not alter AdSense code, use pop-ups, or mimic Google branding without permission.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">Account health</p>
+                    <p>
+                      Keep contact information current and promptly address any policy issues or requests from AdSense.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">Content quality checklist</p>
+                    <p>
+                      Ensure content is original, high-quality, and relevant to your audience. Include clear About and Contact
+                      sections to build transparency and trust.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">Site optimization</p>
+                    <p>
+                      Keep navigation clear, load quickly on desktop and mobile, and implement basic SEO to attract visitors.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">Show commitment</p>
+                    <p>
+                      Publish diverse, engaging content and update the site consistently with fresh posts or improvements.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
