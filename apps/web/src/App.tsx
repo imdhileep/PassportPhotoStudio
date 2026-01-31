@@ -216,6 +216,7 @@ export default function App() {
   ];
   const adMessage = adMessages[(currentStep - 1) % adMessages.length];
   const showAds = true;
+  const showModelStatus = false;
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
   const warningIds = new Set([...displayWarnings, ...displayLightingWarnings].map((warning) => warning.id));
@@ -1483,31 +1484,33 @@ export default function App() {
             className="flex flex-col gap-6"
           >
             {outputPreviewCard}
-            <Card>
-              <CardHeader>
-                <div>
-                  <CardTitle>Model Status</CardTitle>
-                  <CardDescription>Offline assets and delegate selection.</CardDescription>
-                </div>
-              </CardHeader>
-              <div className="grid gap-3 text-sm text-slate-300">
-                <div className="flex items-center justify-between">
-                  <span>Runtime</span>
-                  <span>{modelStatus.loading ? "Loading..." : modelStatus.ready ? "Ready" : "Unavailable"}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Delegate</span>
-                  <span>{modelStatus.delegate ?? "Unknown"}</span>
-                </div>
-                {Object.entries(modelStatus.files).map(([file, ok]) => (
-                  <div key={file} className="flex items-center justify-between text-xs">
-                    <span className="truncate">{file}</span>
-                    <span className={ok ? "text-emerald-300" : "text-flame"}>{ok ? "OK" : "Missing"}</span>
+            {showModelStatus && (
+              <Card>
+                <CardHeader>
+                  <div>
+                    <CardTitle>Model Status</CardTitle>
+                    <CardDescription>Offline assets and delegate selection.</CardDescription>
                   </div>
-                ))}
-                {modelStatus.error && <p className="text-sm text-flame">{modelStatus.error}</p>}
-              </div>
-            </Card>
+                </CardHeader>
+                <div className="grid gap-3 text-sm text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <span>Runtime</span>
+                    <span>{modelStatus.loading ? "Loading..." : modelStatus.ready ? "Ready" : "Unavailable"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Delegate</span>
+                    <span>{modelStatus.delegate ?? "Unknown"}</span>
+                  </div>
+                  {Object.entries(modelStatus.files).map(([file, ok]) => (
+                    <div key={file} className="flex items-center justify-between text-xs">
+                      <span className="truncate">{file}</span>
+                      <span className={ok ? "text-emerald-300" : "text-flame"}>{ok ? "OK" : "Missing"}</span>
+                    </div>
+                  ))}
+                  {modelStatus.error && <p className="text-sm text-flame">{modelStatus.error}</p>}
+                </div>
+              </Card>
+            )}
 
             {errorMessages.length > 0 && (
               <Card>
