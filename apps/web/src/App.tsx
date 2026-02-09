@@ -248,13 +248,7 @@ export default function App() {
   };
   const maxStep = inputUrl ? 6 : cameraActive ? 2 : 1;
   const activeStep = currentStep;
-  const adMessages = [
-    "Ad space will appear here after approval.",
-    "Sponsored content will rotate here after approval.",
-    "Thanks for supporting Passport Photo Studio."
-  ];
-  const adMessage = adMessages[(currentStep - 1) % adMessages.length];
-  const showAds = true;
+  const showAds = false;
   const showModelStatus = false;
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
@@ -2014,22 +2008,6 @@ export default function App() {
                 </div>
               </div>
             </div>
-            {showAds && (
-              <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Sponsored</p>
-                    <p className="text-sm text-slate-300">Advertisement</p>
-                  </div>
-                </div>
-                <div
-                  key={`ad-slot-${currentStep}`}
-                  className="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-center text-xs text-slate-400"
-                >
-                  {adMessage}
-                </div>
-              </div>
-            )}
           </div>
         </section>
         {currentStep === 6 && (
