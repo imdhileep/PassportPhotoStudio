@@ -25,6 +25,46 @@ export const passportStandards: PassportStandard[] = [
     bottomMarginRatio: 0.08
   },
   {
+    id: "uk",
+    label: "UK 35x45 mm",
+    widthMm: 35,
+    heightMm: 45,
+    eyeLineRatio: 0.55,
+    headRatioRange: [0.62, 0.78],
+    topMarginRatio: 0.08,
+    bottomMarginRatio: 0.08
+  },
+  {
+    id: "eu",
+    label: "EU 35x45 mm",
+    widthMm: 35,
+    heightMm: 45,
+    eyeLineRatio: 0.55,
+    headRatioRange: [0.62, 0.78],
+    topMarginRatio: 0.08,
+    bottomMarginRatio: 0.08
+  },
+  {
+    id: "canada",
+    label: "Canada 50x70 mm",
+    widthMm: 50,
+    heightMm: 70,
+    eyeLineRatio: 0.56,
+    headRatioRange: [0.6, 0.76],
+    topMarginRatio: 0.08,
+    bottomMarginRatio: 0.08
+  },
+  {
+    id: "australia",
+    label: "Australia 35x45 mm",
+    widthMm: 35,
+    heightMm: 45,
+    eyeLineRatio: 0.56,
+    headRatioRange: [0.62, 0.78],
+    topMarginRatio: 0.08,
+    bottomMarginRatio: 0.08
+  },
+  {
     id: "custom",
     label: "Custom",
     widthMm: 35,

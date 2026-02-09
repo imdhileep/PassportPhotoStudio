@@ -58,6 +58,19 @@ type LiveGuide = {
   eyeLineRatio: number;
 };
 
+type BatchItem = {
+  id: string;
+  name: string;
+  url: string;
+};
+
+type SavedProfile = {
+  id: string;
+  label: string;
+  width: number;
+  height: number;
+};
+
 const transparentSwatch = {
   backgroundImage:
     "linear-gradient(45deg, rgba(148,163,184,0.35) 25%, transparent 25%), linear-gradient(-45deg, rgba(148,163,184,0.35) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(148,163,184,0.35) 75%), linear-gradient(-45deg, transparent 75%, rgba(148,163,184,0.35) 75%)",
@@ -158,6 +171,11 @@ export default function App() {
   const [qualityTips, setQualityTips] = useState<string[]>([]);
   const [autoCapture, setAutoCapture] = useLocalStorage<boolean>("pps_auto_capture", false);
   const [holdStillCountdown, setHoldStillCountdown] = useState<number | null>(null);
+  const [autoRetouch, setAutoRetouch] = useLocalStorage<boolean>("pps_auto_retouch", true);
+  const [retouchStrength, setRetouchStrength] = useLocalStorage<number>("pps_retouch_strength", 1);
+  const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [savedProfiles, setSavedProfiles] = useLocalStorage<SavedProfile[]>("pps_saved_profiles", []);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -247,6 +265,10 @@ export default function App() {
     (activeStep !== 1 || cameraActive || !!inputUrl) &&
     (activeStep !== 2 || !!inputUrl);
   const holdStillActive = holdStillCountdown !== null;
+  const expectedWidthPx = Math.round((standard.widthMm / 25.4) * qualityMap[qualityMode].ppi);
+  const expectedHeightPx = Math.round((standard.heightMm / 25.4) * qualityMap[qualityMode].ppi);
+  const sheetWidthPx = Math.round(6 * qualityMap[qualityMode].ppi);
+  const sheetHeightPx = Math.round(4 * qualityMap[qualityMode].ppi);
   const guideStyle = liveGuide
     ? {
         left: `${(liveGuide.crop.x / liveGuide.imageWidth) * 100}%`,
@@ -255,6 +277,7 @@ export default function App() {
         height: `${(liveGuide.crop.height / liveGuide.imageHeight) * 100}%`
       }
     : undefined;
+  const batchActive = batchItems.length > 1;
   const inputPreview = (
     <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/60">
       <div className="absolute inset-0 border border-white/10" />
@@ -432,6 +455,13 @@ export default function App() {
       setProcessing(true);
       setProgress("Analyzing photo...");
       try {
+        const lightingStats = computeLightingStats(inputImage);
+        const retouchAdjust = autoRetouch
+          ? getAutoRetouchAdjustments(lightingStats, retouchStrength)
+          : { brightnessDelta: 0, contrastDelta: 0, saturationDelta: 0 };
+        const adjustedBrightness = clamp(debouncedBrightness + retouchAdjust.brightnessDelta, 70, 130);
+        const adjustedContrast = clamp(debouncedContrast + retouchAdjust.contrastDelta, 70, 130);
+        const adjustedSaturation = clamp(debouncedSaturation + retouchAdjust.saturationDelta, 70, 140);
         const { warnings: frameWarnings, canvas } = await processImage({
           image: inputImage,
           bundle,
@@ -444,9 +474,9 @@ export default function App() {
           edgeTrim: edgePresetSettings.trim,
           haloTrim: debouncedHaloTrim,
           matteTightness: debouncedMatteTightness,
-          brightness: debouncedBrightness,
-          contrast: debouncedContrast,
-          saturation: debouncedSaturation,
+          brightness: adjustedBrightness,
+          contrast: adjustedContrast,
+          saturation: adjustedSaturation,
           hue: debouncedHue,
           autoCrop,
           manualAdjust,
@@ -458,7 +488,6 @@ export default function App() {
         if (cancelled) return;
         processedCanvasRef.current = canvas;
         setWarnings(frameWarnings);
-        const lightingStats = computeLightingStats(inputImage);
         setLightingWarnings(analyzeLighting(inputImage));
         const sharpnessScore = computeSharpnessScore(inputImage);
         const report = buildQualityReport(frameWarnings, lightingStats, sharpnessScore);
@@ -504,6 +533,8 @@ export default function App() {
     debouncedContrast,
     debouncedSaturation,
     debouncedHue,
+    autoRetouch,
+    retouchStrength,
     autoCrop,
     manualAdjust,
     cropOffset,
@@ -538,6 +569,13 @@ export default function App() {
       lastFrameRef.current = now;
       try {
         const bitmap = await createImageBitmap(video);
+        const lightingStats = computeLightingStats(bitmap);
+        const retouchAdjust = autoRetouch
+          ? getAutoRetouchAdjustments(lightingStats, retouchStrength)
+          : { brightnessDelta: 0, contrastDelta: 0, saturationDelta: 0 };
+        const adjustedBrightness = clamp(debouncedBrightness + retouchAdjust.brightnessDelta, 70, 130);
+        const adjustedContrast = clamp(debouncedContrast + retouchAdjust.contrastDelta, 70, 130);
+        const adjustedSaturation = clamp(debouncedSaturation + retouchAdjust.saturationDelta, 70, 140);
         const result = await processImage({
           image: bitmap,
           bundle,
@@ -550,9 +588,9 @@ export default function App() {
           edgeTrim: edgePresetSettings.trim,
           haloTrim: debouncedHaloTrim,
           matteTightness: debouncedMatteTightness,
-          brightness: debouncedBrightness,
-          contrast: debouncedContrast,
-          saturation: debouncedSaturation,
+          brightness: adjustedBrightness,
+          contrast: adjustedContrast,
+          saturation: adjustedSaturation,
           hue: debouncedHue,
           autoCrop,
           manualAdjust,
@@ -561,7 +599,6 @@ export default function App() {
           qualityMode,
           maskThreshold: manualThreshold ? maskThreshold : undefined
         });
-        const lightingStats = computeLightingStats(bitmap);
         const sharpnessScore = computeSharpnessScore(bitmap);
         const report = buildQualityReport(result.warnings, lightingStats, sharpnessScore);
         bitmap.close();
@@ -646,6 +683,8 @@ export default function App() {
     debouncedContrast,
     debouncedSaturation,
     debouncedHue,
+    autoRetouch,
+    retouchStrength,
     autoCrop,
     manualAdjust,
     cropOffset,
@@ -741,6 +780,8 @@ export default function App() {
     processedCanvasRef.current = null;
     setQualityScore(0);
     setQualityTips([]);
+    setBatchItems([]);
+    setSelectedBatchId(null);
     setCapturedFromCamera(false);
     setLivePreview(true);
     setCurrentStep(1);
@@ -757,6 +798,8 @@ export default function App() {
     processedCanvasRef.current = null;
     setQualityScore(0);
     setQualityTips([]);
+    setBatchItems([]);
+    setSelectedBatchId(null);
     setCapturedFromCamera(false);
     setLivePreview(false);
     setCurrentStep(1);
@@ -774,16 +817,36 @@ export default function App() {
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputError(null);
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCapturedFromCamera(false);
-      setInputUrl(reader.result as string);
-      setCurrentStep(2);
-    };
-    reader.onerror = () => setInputError("Upload failed. Try a different file.");
-    reader.readAsDataURL(file);
+    const files = Array.from(event.target.files ?? []).slice(0, 5);
+    if (files.length === 0) return;
+    const readFile = (file: File) =>
+      new Promise<BatchItem>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () =>
+          resolve({
+            id: `${file.name}-${file.lastModified}`,
+            name: file.name,
+            url: reader.result as string
+          });
+        reader.onerror = () => reject(new Error("Upload failed."));
+        reader.readAsDataURL(file);
+      });
+    Promise.all(files.map(readFile))
+      .then((items) => {
+        setCapturedFromCamera(false);
+        if (items.length > 1) {
+          setBatchItems(items);
+          setSelectedBatchId(items[0].id);
+          setInputUrl(items[0].url);
+        } else {
+          setBatchItems([]);
+          setSelectedBatchId(null);
+          setInputUrl(items[0].url);
+        }
+        setCurrentStep(2);
+      })
+      .catch(() => setInputError("Upload failed. Try a different file."));
+    event.currentTarget.value = "";
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -900,6 +963,61 @@ export default function App() {
     const quality = format === "jpeg" ? qualityMap[qualityMode].jpg : 1;
     const blob = await toBlob(standardOutput, `image/${format}`, quality);
     downloadBlob(blob, `passport-${standard.id}.${format === "jpeg" ? "jpg" : "png"}`);
+  };
+
+  const handleExportBatch = async (format: "png" | "jpeg") => {
+    if (!bundle || batchItems.length < 2) return;
+    setProcessing(true);
+    setProgress("Exporting batch...");
+    try {
+      for (const item of batchItems) {
+        const img = await loadImageFromUrl(item.url);
+        const lightingStats = computeLightingStats(img);
+        const retouchAdjust = autoRetouch
+          ? getAutoRetouchAdjustments(lightingStats, retouchStrength)
+          : { brightnessDelta: 0, contrastDelta: 0, saturationDelta: 0 };
+        const adjustedBrightness = clamp(debouncedBrightness + retouchAdjust.brightnessDelta, 70, 130);
+        const adjustedContrast = clamp(debouncedContrast + retouchAdjust.contrastDelta, 70, 130);
+        const adjustedSaturation = clamp(debouncedSaturation + retouchAdjust.saturationDelta, 70, 140);
+        const { canvas } = await processImage({
+          image: img,
+          bundle,
+          standard,
+          backgroundColor: debouncedBackground,
+          feather: effectiveFeather,
+          refineEdges,
+          refineStrength: effectiveRefineStrength,
+          edgeIntensity: effectiveEdgeIntensity,
+          edgeTrim: edgePresetSettings.trim,
+          haloTrim: debouncedHaloTrim,
+          matteTightness: debouncedMatteTightness,
+          brightness: adjustedBrightness,
+          contrast: adjustedContrast,
+          saturation: adjustedSaturation,
+          hue: debouncedHue,
+          autoCrop,
+          manualAdjust,
+          cropOffset,
+          cropZoom,
+          qualityMode,
+          maskThreshold: manualThreshold ? maskThreshold : undefined
+        });
+        let standardOutput = renderPassport(canvas, standard, qualityMap[qualityMode].ppi);
+        if (format === "jpeg" && backgroundColor === "transparent") {
+          standardOutput = flattenCanvas(standardOutput, "#ffffff");
+        }
+        const quality = format === "jpeg" ? qualityMap[qualityMode].jpg : 1;
+        const blob = await toBlob(standardOutput, `image/${format}`, quality);
+        const safeName = item.name.replace(/\.[^/.]+$/, "");
+        downloadBlob(blob, `${safeName}-${standard.id}.${format === "jpeg" ? "jpg" : "png"}`);
+      }
+    } catch (error) {
+      console.error("Batch export failed", error);
+      setErrorMessages((prev) => [...prev, "Batch export failed. Try again."]);
+    } finally {
+      setProcessing(false);
+      setProgress("Ready");
+    }
   };
 
   const handleExportSheet = async () => {
@@ -1051,8 +1169,8 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <label className="cursor-pointer rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm">
-                        Upload image
-                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                        Upload image (up to 5)
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
                       </label>
                     </div>
                   </div>
@@ -1081,6 +1199,38 @@ export default function App() {
                   </CardHeader>
                   <div className="grid gap-4">
                     {inputPreview}
+                    {batchActive && (
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-white">Batch selection</p>
+                            <p className="text-xs text-slate-400">Pick the best photo to continue editing.</p>
+                          </div>
+                          <span className="text-xs text-slate-400">{batchItems.length} photos</span>
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                          {batchItems.map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedBatchId(item.id);
+                                setInputUrl(item.url);
+                              }}
+                              className={cn(
+                                "overflow-hidden rounded-2xl border text-left transition",
+                                selectedBatchId === item.id
+                                  ? "border-white"
+                                  : "border-white/15 hover:border-white/40"
+                              )}
+                            >
+                              <img src={item.url} alt={item.name} className="h-28 w-full object-cover" />
+                              <div className="px-3 py-2 text-xs text-slate-300">{item.name}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-3">
                       {cameraActive && (
                         <Button
@@ -1178,29 +1328,71 @@ export default function App() {
                       </div>
                     </div>
                     {standardId === "custom" && (
-                      <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 sm:grid-cols-2">
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-slate-400">Width (mm)</p>
-                          <input
-                            type="number"
-                            min={20}
-                            max={100}
-                            value={customWidth}
-                            onChange={(event) => setCustomWidth(Number(event.target.value))}
-                            className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
-                          />
+                      <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-slate-400">Width (mm)</p>
+                            <input
+                              type="number"
+                              min={20}
+                              max={100}
+                              value={customWidth}
+                              onChange={(event) => setCustomWidth(Number(event.target.value))}
+                              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-slate-400">Height (mm)</p>
+                            <input
+                              type="number"
+                              min={20}
+                              max={120}
+                              value={customHeight}
+                              onChange={(event) => setCustomHeight(Number(event.target.value))}
+                              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-slate-400">Height (mm)</p>
-                          <input
-                            type="number"
-                            min={20}
-                            max={120}
-                            value={customHeight}
-                            onChange={(event) => setCustomHeight(Number(event.target.value))}
-                            className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
-                          />
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              const profile: SavedProfile = {
+                                id: `${customWidth}x${customHeight}`,
+                                label: `${customWidth}x${customHeight} mm`,
+                                width: customWidth,
+                                height: customHeight
+                              };
+                              setSavedProfiles((prev) => {
+                                const next = [profile, ...prev.filter((p) => p.id !== profile.id)];
+                                return next.slice(0, 5);
+                              });
+                            }}
+                          >
+                            Save size
+                          </Button>
+                          {savedProfiles.length > 0 && (
+                            <span className="text-xs text-slate-400">Saved profiles</span>
+                          )}
                         </div>
+                        {savedProfiles.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {savedProfiles.map((profile) => (
+                              <button
+                                key={profile.id}
+                                type="button"
+                                onClick={() => {
+                                  setStandardId("custom");
+                                  setCustomWidth(profile.width);
+                                  setCustomHeight(profile.height);
+                                }}
+                                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300 transition hover:border-white/40"
+                              >
+                                {profile.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1339,14 +1531,14 @@ export default function App() {
                 <Card>
                   <CardHeader>
                     <div>
-                      <CardTitle>Refine Edges</CardTitle>
-                      <CardDescription>Dial in feathering and mask strength.</CardDescription>
+                      <CardTitle>Smart Background</CardTitle>
+                      <CardDescription>Dial in edge cleanup for hair and shoulders.</CardDescription>
                     </div>
                     <Badge>Step 4</Badge>
                   </CardHeader>
                   <div className="grid gap-4">
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Edge preset</p>
+                      <p className="text-xs uppercase tracking-wide text-slate-400">Smart preset</p>
                       <select
                         value={edgePreset}
                         onChange={(event) => setEdgePreset(event.target.value as "balanced" | "hair" | "clean")}
@@ -1456,6 +1648,28 @@ export default function App() {
                     <Badge>Step 5</Badge>
                   </CardHeader>
                   <div className="grid gap-4">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">Auto retouch</p>
+                          <p className="text-xs text-slate-400">Balances lighting and contrast automatically.</p>
+                        </div>
+                        <Switch checked={autoRetouch} onCheckedChange={setAutoRetouch} />
+                      </div>
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs text-slate-400">
+                          <span>Strength</span>
+                          <span>{retouchStrength.toFixed(1)}x</span>
+                        </div>
+                        <Slider
+                          value={[retouchStrength]}
+                          min={0}
+                          max={3}
+                          step={0.5}
+                          onValueChange={([val]) => setRetouchStrength(val)}
+                        />
+                      </div>
+                    </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <p className="text-xs uppercase tracking-wide text-slate-400">Preset</p>
                       <select
@@ -1585,6 +1799,16 @@ export default function App() {
                         <Button variant="outline" onClick={() => handleExport("jpeg")}>
                           Export JPG
                         </Button>
+                        {batchActive && (
+                          <>
+                            <Button variant="ghost" onClick={() => handleExportBatch("png")}>
+                              Export all PNG
+                            </Button>
+                            <Button variant="ghost" onClick={() => handleExportBatch("jpeg")}>
+                              Export all JPG
+                            </Button>
+                          </>
+                        )}
                         <Button variant="accent" onClick={handleExportSheet}>
                           4x6 Sheet
                         </Button>
@@ -1601,6 +1825,19 @@ export default function App() {
                         Share link: <a className="text-ocean" href={shareLink}>{shareLink}</a>
                       </div>
                     )}
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                      <p className="text-xs uppercase tracking-wide text-slate-400">Print pack</p>
+                      <div className="mt-2 grid gap-2 text-xs text-slate-300">
+                        <div className="flex items-center justify-between">
+                          <span>Passport size</span>
+                          <span>{`${expectedWidthPx} x ${expectedHeightPx} px @ ${qualityMap[qualityMode].ppi} DPI`}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>4x6 sheet</span>
+                          <span>{`${sheetWidthPx} x ${sheetHeightPx} px @ ${qualityMap[qualityMode].ppi} DPI`}</span>
+                        </div>
+                      </div>
+                    </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
                       <p className="text-xs uppercase tracking-wide text-slate-400">Compliance checklist</p>
                       <div className="mt-2 grid gap-2">
@@ -2106,6 +2343,18 @@ const buildQualityReport = (
   return { score, tips };
 };
 
+const getAutoRetouchAdjustments = (
+  lighting: { mean: number; stdDev: number },
+  strength: number
+) => {
+  const boost = clamp(strength, 0, 3);
+  const brightnessDelta =
+    lighting.mean < 90 ? 6 * boost : lighting.mean > 200 ? -6 * boost : 0;
+  const contrastDelta = lighting.stdDev < 25 ? 4 * boost : 0;
+  const saturationDelta = lighting.stdDev < 25 ? 2 * boost : 0;
+  return { brightnessDelta, contrastDelta, saturationDelta };
+};
+
 const processImage = async ({
   image,
   bundle,
@@ -2379,6 +2628,14 @@ const toObjectUrl = async (canvas: HTMLCanvasElement, previousUrl: string | null
   }
   return url;
 };
+
+const loadImageFromUrl = (url: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = url;
+  });
 
 const prepareImageForProcessing = (
   image: ImageBitmap | HTMLImageElement | HTMLCanvasElement,
