@@ -118,7 +118,7 @@ export default function App() {
   const [hue, setHue] = useLocalStorage<number>("pps_hue", 0);
   const [autoCrop, setAutoCrop] = useLocalStorage<boolean>("pps_auto_crop", true);
   const [manualAdjust, setManualAdjust] = useLocalStorage<boolean>("pps_manual_adjust", false);
-  const [showBefore, setShowBefore] = useLocalStorage<boolean>("pps_show_before", false);
+  const [beforeAfterSplit, setBeforeAfterSplit] = useLocalStorage<number>("pps_before_after_split", 60);
   const [livePreview, setLivePreview] = useLocalStorage<boolean>("pps_live_preview", true);
   const [manualThreshold, setManualThreshold] = useLocalStorage<boolean>("pps_mask_manual", false);
   const [maskThreshold, setMaskThreshold] = useLocalStorage<number>("pps_mask_threshold", 0.08);
@@ -153,6 +153,7 @@ export default function App() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showAdSense, setShowAdSense] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useLocalStorage<boolean>("pps_onboarding_dismissed", false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -178,6 +179,11 @@ export default function App() {
       bottomMarginRatio: 0.08
     } satisfies PassportStandard;
   }, [standardId, customWidth, customHeight]);
+  const standardPresets = [
+    { id: "us", label: "US 2x2 in", size: "2x2 in" },
+    { id: "india", label: "India 35x45 mm", size: "35x45 mm" },
+    { id: "custom", label: "Custom size", size: `${Math.max(20, customWidth)}x${Math.max(20, customHeight)} mm` }
+  ];
   const backgroundColor = useCustomBg ? customBackground : background;
   const debouncedFeather = useDebouncedValue(feather, 150);
   const debouncedRefineStrength = useDebouncedValue(refineStrength, 150);
@@ -207,6 +213,15 @@ export default function App() {
   const effectiveFeather = Math.max(0, debouncedFeather + edgePresetSettings.featherBoost);
   const effectiveRefineStrength = Math.max(1, debouncedRefineStrength + edgePresetSettings.strengthBoost);
   const effectiveEdgeIntensity = debouncedEdgeIntensity + edgePresetSettings.edgeIntensityBoost;
+  const stepLabels = ["Camera", "Capture/Crop", "Background", "Refine", "Color", "Export"];
+  const tipsByStep: Record<number, string> = {
+    1: "Start your camera or upload a photo to begin.",
+    2: "Capture a frame and align your eyes to the guide before moving on.",
+    3: "Choose a compliant background or keep it transparent.",
+    4: "Refine edges and feathering to remove halos.",
+    5: "Adjust brightness, contrast, and presets to match standards.",
+    6: "Export PNG/JPG or a 4x6 print sheet."
+  };
   const maxStep = inputUrl ? 6 : cameraActive ? 2 : 1;
   const activeStep = currentStep;
   const adMessages = [
@@ -220,6 +235,11 @@ export default function App() {
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
   const warningIds = new Set([...displayWarnings, ...displayLightingWarnings].map((warning) => warning.id));
+  const stepTitle = stepLabels[activeStep - 1] ?? `Step ${activeStep}`;
+  const canWizardNext =
+    activeStep < maxStep &&
+    (activeStep !== 1 || cameraActive || !!inputUrl) &&
+    (activeStep !== 2 || !!inputUrl);
   const guideStyle = liveGuide
     ? {
         left: `${(liveGuide.crop.x / liveGuide.imageWidth) * 100}%`,
@@ -298,10 +318,9 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    if (showBefore) return;
     const sourceUrl = outputUrl ?? livePreviewUrl;
     if (!sourceUrl) return;
-  }, [outputUrl, livePreviewUrl, showBefore]);
+  }, [outputUrl, livePreviewUrl]);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -587,17 +606,16 @@ export default function App() {
   const startCamera = async (mode: "user" | "environment" = facingMode, resetInput = true) => {
     setInputError(null);
     try {
-      if (resetInput) {
-        setInputUrl(null);
-        setInputImage(null);
-        setOutputUrl(null);
-        setPreviewUrl(null);
-        setWarnings([]);
-        setLightingWarnings([]);
-        setErrorMessages([]);
-        processedCanvasRef.current = null;
-        setShowBefore(false);
-      }
+        if (resetInput) {
+          setInputUrl(null);
+          setInputImage(null);
+          setOutputUrl(null);
+          setPreviewUrl(null);
+          setWarnings([]);
+          setLightingWarnings([]);
+          setErrorMessages([]);
+          processedCanvasRef.current = null;
+        }
       setFacingMode(mode);
       setLivePreview(true);
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -670,7 +688,6 @@ export default function App() {
     setLightingWarnings([]);
     setErrorMessages([]);
     processedCanvasRef.current = null;
-    setShowBefore(false);
     setCapturedFromCamera(false);
     setLivePreview(true);
     setCurrentStep(1);
@@ -685,7 +702,6 @@ export default function App() {
     setLightingWarnings([]);
     setErrorMessages([]);
     processedCanvasRef.current = null;
-    setShowBefore(false);
     setCapturedFromCamera(false);
     setLivePreview(false);
     setCurrentStep(1);
@@ -770,14 +786,22 @@ export default function App() {
               Live {liveFps} fps
             </div>
           )}
-          {showBefore && inputUrl ? (
-            <img src={inputUrl} alt="Before" className="h-[340px] w-full object-contain" />
-          ) : previewUrl || livePreviewUrl ? (
-            <img
-              src={previewUrl ?? livePreviewUrl ?? undefined}
-              alt="Processed output"
-              className="h-[340px] w-full object-contain"
-            />
+          {previewUrl || livePreviewUrl ? (
+            <>
+              <img
+                src={previewUrl ?? livePreviewUrl ?? undefined}
+                alt="Processed output"
+                className="h-[340px] w-full object-contain"
+              />
+              {inputUrl && (
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{ clipPath: `inset(0 ${100 - beforeAfterSplit}% 0 0)` }}
+                >
+                  <img src={inputUrl} alt="Before" className="h-[340px] w-full object-contain" />
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex h-[340px] items-center justify-center text-sm text-slate-400">
               Output will appear here.
@@ -790,17 +814,19 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-slate-300">
-          <Switch
-            checked={showBefore}
-            onCheckedChange={(value) => {
-              setShowBefore(value);
-              if (value) {
-                setLivePreview(false);
-              }
-            }}
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div className="flex items-center justify-between text-sm text-slate-300">
+            <span>Before / After</span>
+            <span className="text-xs text-slate-400">{beforeAfterSplit}%</span>
+          </div>
+          <Slider
+            value={[beforeAfterSplit]}
+            min={0}
+            max={100}
+            step={1}
+            onValueChange={([value]) => setBeforeAfterSplit(value)}
+            className="mt-2"
           />
-          Before / After
         </div>
       </div>
     </Card>
@@ -888,7 +914,42 @@ export default function App() {
         </header>
         <div className="mx-auto max-w-6xl px-6 pb-6">
           <Stepper active={activeStep} maxStep={maxStep} onStepChange={setCurrentStep} />
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+            <div>
+              <span className="text-xs uppercase tracking-[0.35em] text-slate-400">Progress</span>
+              <p className="text-sm font-semibold text-white">{`Step ${activeStep} of ${maxStep} — ${stepTitle}`}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
+                disabled={activeStep <= 1}
+              >
+                Prev
+              </Button>
+              <Button
+                variant="accent"
+                onClick={() => setCurrentStep((prev) => Math.min(maxStep, prev + 1))}
+                disabled={!canWizardNext}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
+        {!onboardingDismissed && (
+          <div className="mx-auto max-w-6xl px-6 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Quick tip</p>
+                <p className="text-sm text-white">{tipsByStep[activeStep] ?? "Follow the steps to create your photo."}</p>
+              </div>
+              <Button variant="ghost" onClick={() => setOnboardingDismissed(true)}>
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
         {!supportsCamera && (
           <div className="mx-auto max-w-6xl px-6 pb-4 text-sm text-amber-200">
             Camera access isn’t supported in this browser. Please upload a photo instead.
@@ -970,7 +1031,6 @@ export default function App() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setShowBefore(false);
                             setLivePreview(false);
                             captureFrame();
                           }}
@@ -992,20 +1052,41 @@ export default function App() {
                       <Switch checked={livePreview} onCheckedChange={setLivePreview} />
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3">
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-400">Standard</p>
-                        <select
-                          value={standardId}
-                          onChange={(event) => setStandardId(event.target.value as PassportStandard["id"])}
-                          className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
-                        >
-                          {passportStandards.map((option) => (
-                            <option key={option.id} value={option.id} className="bg-slate-900">
-                              {option.label}
-                            </option>
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Standard presets</p>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                          {standardPresets.map((preset) => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => setStandardId(preset.id as PassportStandard["id"])}
+                              className={cn(
+                                "rounded-2xl border px-3 py-3 text-left text-sm transition",
+                                standardId === preset.id
+                                  ? "border-white bg-white/10 text-white"
+                                  : "border-white/15 bg-white/5 text-slate-300 hover:border-white/40"
+                              )}
+                            >
+                              <p className="text-sm font-semibold">{preset.label}</p>
+                              <p className="text-xs text-slate-400">{preset.size}</p>
+                            </button>
                           ))}
-                        </select>
+                        </div>
+                        <div className="mt-4">
+                          <p className="text-xs uppercase tracking-wide text-slate-400">All standards</p>
+                          <select
+                            value={standardId}
+                            onChange={(event) => setStandardId(event.target.value as PassportStandard["id"])}
+                            className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                          >
+                            {passportStandards.map((option) => (
+                              <option key={option.id} value={option.id} className="bg-slate-900">
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <p className="text-xs uppercase tracking-wide text-slate-400">Quality</p>
@@ -1481,7 +1562,7 @@ export default function App() {
             initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
             animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
             transition={prefersReducedMotion ? undefined : { duration: 0.4, delay: 0.05 }}
-            className="flex flex-col gap-6"
+            className="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start"
           >
             {outputPreviewCard}
             {showModelStatus && (
