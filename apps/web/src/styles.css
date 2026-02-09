@@ -6,57 +6,57 @@
 
 :root {
   color-scheme: dark;
-  --bg-0: #05070c;
-  --bg-1: #0b1220;
-  --bg-2: #111827;
-  --card: rgba(8, 15, 28, 0.78);
-  --card-border: rgba(56, 189, 248, 0.18);
-  --accent: #22d3ee;
-  --accent-2: #60a5fa;
-  --glow: rgba(34, 211, 238, 0.25);
+  --bg-0: #0b0a08;
+  --bg-1: #15110d;
+  --bg-2: #1e1812;
+  --card: rgba(18, 14, 10, 0.82);
+  --card-border: rgba(252, 211, 77, 0.2);
+  --accent: #facc15;
+  --accent-2: #f59e0b;
+  --glow: rgba(250, 204, 21, 0.2);
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg-0: #f8fafc;
-  --bg-1: #eef2f7;
-  --bg-2: #ffffff;
-  --card: rgba(255, 255, 255, 0.85);
-  --card-border: rgba(15, 23, 42, 0.12);
-  --accent: #0ea5e9;
-  --accent-2: #2563eb;
-  --glow: rgba(14, 165, 233, 0.2);
+  --bg-0: #f6f1e9;
+  --bg-1: #f1eadf;
+  --bg-2: #fffaf2;
+  --card: rgba(255, 250, 242, 0.9);
+  --card-border: rgba(120, 72, 32, 0.16);
+  --accent: #c0841d;
+  --accent-2: #a16207;
+  --glow: rgba(192, 132, 29, 0.18);
 }
 
 body {
   font-family: "Space Grotesk", ui-sans-serif, system-ui;
   background:
-    radial-gradient(1200px 600px at 12% 12%, var(--glow) 0%, transparent 55%),
-    radial-gradient(900px 500px at 88% 20%, rgba(96, 165, 250, 0.15) 0%, transparent 60%),
-    radial-gradient(800px 600px at 60% 85%, rgba(14, 116, 144, 0.18) 0%, transparent 60%),
+    radial-gradient(900px 520px at 10% 15%, var(--glow) 0%, transparent 60%),
+    radial-gradient(700px 520px at 85% 12%, rgba(251, 191, 36, 0.12) 0%, transparent 60%),
+    radial-gradient(900px 680px at 50% 90%, rgba(180, 83, 9, 0.18) 0%, transparent 65%),
     linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 52%, var(--bg-0) 100%);
   min-height: 100vh;
 }
 
 .glass {
-  background: linear-gradient(135deg, var(--card), rgba(8, 15, 28, 0.62));
+  background: linear-gradient(135deg, var(--card), rgba(12, 9, 6, 0.7));
   backdrop-filter: blur(16px);
   border: 1px solid var(--card-border);
   box-shadow:
-    0 24px 60px rgba(3, 7, 18, 0.45),
-    0 0 0 1px rgba(34, 211, 238, 0.06),
-    0 0 32px rgba(34, 211, 238, 0.08);
+    0 24px 60px rgba(10, 7, 5, 0.45),
+    0 0 0 1px rgba(251, 191, 36, 0.05),
+    0 0 32px rgba(251, 191, 36, 0.08);
 }
 
 .grid-glow {
   background-image:
-    radial-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(8, 15, 28, 0.65) 0%, rgba(5, 7, 12, 0.75) 100%);
-  background-size: 24px 24px, cover;
+    radial-gradient(rgba(120, 72, 32, 0.12) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(20, 14, 10, 0.62) 0%, rgba(10, 7, 5, 0.78) 100%);
+  background-size: 28px 28px, cover;
 }
 
 .text-gradient {
-  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 45%, #e2e8f0 90%);
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 45%, #f8fafc 90%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
