@@ -154,6 +154,10 @@ export default function App() {
   const [showTerms, setShowTerms] = useState(false);
   const [showAdSense, setShowAdSense] = useState(false);
   const [onboardingDismissed, setOnboardingDismissed] = useLocalStorage<boolean>("pps_onboarding_dismissed", false);
+  const [qualityScore, setQualityScore] = useState(0);
+  const [qualityTips, setQualityTips] = useState<string[]>([]);
+  const [autoCapture, setAutoCapture] = useLocalStorage<boolean>("pps_auto_capture", false);
+  const [holdStillCountdown, setHoldStillCountdown] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -165,6 +169,8 @@ export default function App() {
   const liveProcessingRef = useRef(false);
   const fpsRef = useRef({ lastTime: 0, frames: 0 });
   const outputUrlRef = useRef<string | null>(null);
+  const holdStillStartRef = useRef<number | null>(null);
+  const autoCaptureLockRef = useRef(false);
 
   const standard = useMemo(() => {
     if (standardId !== "custom") return getStandardById(standardId);
@@ -240,6 +246,7 @@ export default function App() {
     activeStep < maxStep &&
     (activeStep !== 1 || cameraActive || !!inputUrl) &&
     (activeStep !== 2 || !!inputUrl);
+  const holdStillActive = holdStillCountdown !== null;
   const guideStyle = liveGuide
     ? {
         left: `${(liveGuide.crop.x / liveGuide.imageWidth) * 100}%`,
@@ -269,6 +276,13 @@ export default function App() {
           </div>
           <div className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
             Align eyes to dashed line
+          </div>
+        </div>
+      )}
+      {cameraActive && autoCapture && holdStillActive && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="rounded-2xl border border-white/20 bg-black/60 px-4 py-2 text-sm text-white">
+            Hold still… {holdStillCountdown?.toFixed(1)}s
           </div>
         </div>
       )}
@@ -444,7 +458,12 @@ export default function App() {
         if (cancelled) return;
         processedCanvasRef.current = canvas;
         setWarnings(frameWarnings);
+        const lightingStats = computeLightingStats(inputImage);
         setLightingWarnings(analyzeLighting(inputImage));
+        const sharpnessScore = computeSharpnessScore(inputImage);
+        const report = buildQualityReport(frameWarnings, lightingStats, sharpnessScore);
+        setQualityScore(report.score);
+        setQualityTips(report.tips);
         setPreviewUrl(canvas.toDataURL("image/png"));
         const newUrl = await toObjectUrl(canvas, outputUrlRef.current);
         outputUrlRef.current = newUrl;
@@ -542,12 +561,44 @@ export default function App() {
           qualityMode,
           maskThreshold: manualThreshold ? maskThreshold : undefined
         });
+        const lightingStats = computeLightingStats(bitmap);
+        const sharpnessScore = computeSharpnessScore(bitmap);
+        const report = buildQualityReport(result.warnings, lightingStats, sharpnessScore);
         bitmap.close();
         if (!cancelled) {
           setLivePreviewUrl(result.canvas.toDataURL("image/png"));
           setLiveWarnings(result.warnings);
           setLiveGuide(result.guide ?? null);
           drawPreviewCanvas(outputPreviewRef.current, result.canvas);
+          setQualityScore(report.score);
+          setQualityTips(report.tips);
+          if (autoCapture && cameraActive && !inputUrl) {
+            const hasWarning = result.warnings.some((warning) => warning.level === "warning");
+            const goodEnough = report.score >= 85 && !hasWarning;
+            if (goodEnough) {
+              if (!holdStillStartRef.current) {
+                holdStillStartRef.current = now;
+              }
+              const elapsed = (now - holdStillStartRef.current) / 1000;
+              const remaining = Math.max(0, 3 - elapsed);
+              setHoldStillCountdown(remaining);
+              if (remaining <= 0 && !autoCaptureLockRef.current) {
+                autoCaptureLockRef.current = true;
+                captureFrame();
+                setHoldStillCountdown(null);
+                holdStillStartRef.current = null;
+                window.setTimeout(() => {
+                  autoCaptureLockRef.current = false;
+                }, 2000);
+              }
+            } else {
+              holdStillStartRef.current = null;
+              setHoldStillCountdown(null);
+            }
+          } else {
+            holdStillStartRef.current = null;
+            setHoldStillCountdown(null);
+          }
           const fpsState = fpsRef.current;
           fpsState.frames += 1;
           if (now - fpsState.lastTime > 1000) {
@@ -688,6 +739,8 @@ export default function App() {
     setLightingWarnings([]);
     setErrorMessages([]);
     processedCanvasRef.current = null;
+    setQualityScore(0);
+    setQualityTips([]);
     setCapturedFromCamera(false);
     setLivePreview(true);
     setCurrentStep(1);
@@ -702,6 +755,8 @@ export default function App() {
     setLightingWarnings([]);
     setErrorMessages([]);
     processedCanvasRef.current = null;
+    setQualityScore(0);
+    setQualityTips([]);
     setCapturedFromCamera(false);
     setLivePreview(false);
     setCurrentStep(1);
@@ -1050,6 +1105,25 @@ export default function App() {
                         <p className="text-xs text-slate-400">Realtime background replacement + face guide.</p>
                       </div>
                       <Switch checked={livePreview} onCheckedChange={setLivePreview} />
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-white">Guided capture</p>
+                          <p className="text-xs text-slate-400">Auto-capture when quality is high and stable.</p>
+                        </div>
+                        <Switch checked={autoCapture} onCheckedChange={setAutoCapture} />
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                          Quality: {qualityScore}%
+                        </span>
+                        {autoCapture && cameraActive && !inputUrl && (
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                            {holdStillActive ? `Hold still ${holdStillCountdown?.toFixed(1)}s` : "Waiting for steady frame"}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid gap-3">
@@ -1564,6 +1638,39 @@ export default function App() {
             transition={prefersReducedMotion ? undefined : { duration: 0.4, delay: 0.05 }}
             className="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start"
           >
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Quality meter</CardTitle>
+                  <CardDescription>Real-time guidance to improve your photo.</CardDescription>
+                </div>
+              </CardHeader>
+              <div className="grid gap-4">
+                <div className="flex items-center justify-between text-sm text-slate-300">
+                  <span>Overall score</span>
+                  <span className="text-white">{qualityScore}%</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      qualityScore >= 85 ? "bg-emerald-400" : qualityScore >= 65 ? "bg-gold" : "bg-flame"
+                    )}
+                    style={{ width: `${qualityScore}%` }}
+                  />
+                </div>
+                <div className="grid gap-2 text-xs text-slate-300">
+                  {(qualityTips.length > 0
+                    ? qualityTips
+                    : ["Looks good. You can proceed to export when ready."]
+                  ).map((tip) => (
+                    <div key={tip} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                      {tip}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
             {outputPreviewCard}
             {showModelStatus && (
               <Card>
@@ -1842,14 +1949,16 @@ export default function App() {
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-const analyzeLighting = (image: HTMLImageElement): WarningItem[] => {
+const computeLightingStats = (
+  source: ImageBitmap | HTMLImageElement | HTMLCanvasElement,
+  size = 64
+) => {
   const canvas = document.createElement("canvas");
-  const size = 64;
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return [];
-  ctx.drawImage(image, 0, 0, size, size);
+  if (!ctx) return { mean: 0, stdDev: 0 };
+  ctx.drawImage(source, 0, 0, size, size);
   const { data } = ctx.getImageData(0, 0, size, size);
   let sum = 0;
   let sumSq = 0;
@@ -1865,6 +1974,11 @@ const analyzeLighting = (image: HTMLImageElement): WarningItem[] => {
   const mean = sum / pixels;
   const variance = sumSq / pixels - mean * mean;
   const stdDev = Math.sqrt(Math.max(variance, 0));
+  return { mean, stdDev };
+};
+
+const analyzeLighting = (image: HTMLImageElement): WarningItem[] => {
+  const { mean, stdDev } = computeLightingStats(image);
   const warnings: WarningItem[] = [];
   if (mean < 90) {
     warnings.push({
@@ -1891,6 +2005,105 @@ const analyzeLighting = (image: HTMLImageElement): WarningItem[] => {
     });
   }
   return warnings;
+};
+
+const computeSharpnessScore = (source: ImageBitmap | HTMLImageElement | HTMLCanvasElement) => {
+  const canvas = document.createElement("canvas");
+  const size = 64;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return 0;
+  ctx.drawImage(source, 0, 0, size, size);
+  const { data } = ctx.getImageData(0, 0, size, size);
+  const grayscale = new Float32Array(size * size);
+  for (let i = 0; i < size * size; i += 1) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    grayscale[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  let lapSum = 0;
+  let lapSumSq = 0;
+  let count = 0;
+  for (let y = 1; y < size - 1; y += 1) {
+    for (let x = 1; x < size - 1; x += 1) {
+      const idx = y * size + x;
+      const lap =
+        grayscale[idx - 1] +
+        grayscale[idx + 1] +
+        grayscale[idx - size] +
+        grayscale[idx + size] -
+        grayscale[idx] * 4;
+      lapSum += lap;
+      lapSumSq += lap * lap;
+      count += 1;
+    }
+  }
+  const mean = lapSum / Math.max(1, count);
+  const variance = lapSumSq / Math.max(1, count) - mean * mean;
+  const normalized = clamp(variance / 20, 0, 100);
+  return Math.round(normalized);
+};
+
+const buildQualityReport = (
+  warnings: WarningItem[],
+  lighting: { mean: number; stdDev: number },
+  sharpnessScore: number
+) => {
+  let score = 100;
+  const tips: string[] = [];
+
+  if (lighting.mean < 90) {
+    score -= 20;
+    tips.push("Increase lighting to avoid shadows.");
+  }
+  if (lighting.mean > 200) {
+    score -= 20;
+    tips.push("Reduce harsh light to avoid overexposure.");
+  }
+  if (lighting.stdDev < 25) {
+    score -= 10;
+    tips.push("Add gentle front lighting for better contrast.");
+  }
+  if (sharpnessScore < 50) {
+    score -= 20;
+    tips.push("Hold still or use a tripod to improve sharpness.");
+  }
+
+  warnings.forEach((warning) => {
+    switch (warning.id) {
+      case "tilt":
+        score -= 15;
+        tips.push("Keep your head level and eyes straight.");
+        break;
+      case "framing":
+        score -= 15;
+        tips.push("Ensure the full head is visible within the frame.");
+        break;
+      case "too_small":
+        score -= 10;
+        tips.push("Move closer so the head size meets requirements.");
+        break;
+      case "too_large":
+        score -= 10;
+        tips.push("Move back slightly so the head is not too large.");
+        break;
+      case "bg_failed":
+        score -= 10;
+        tips.push("Try a clearer background for better segmentation.");
+        break;
+      default:
+        break;
+    }
+  });
+
+  if (warnings.some((warning) => warning.level === "warning") && tips.length === 0) {
+    tips.push("Fix the highlighted warnings before export.");
+  }
+
+  score = clamp(Math.round(score), 0, 100);
+  return { score, tips };
 };
 
 const processImage = async ({
