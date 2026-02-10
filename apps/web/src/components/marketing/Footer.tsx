@@ -7,14 +7,20 @@ export default function Footer() {
           <p className="text-xs text-slate-400">Privacy-first passport photos in minutes.</p>
         </div>
         <div className="flex flex-wrap gap-4 text-xs text-slate-400">
-          <a href="/privacy" className="transition hover:text-white">
-            Privacy
+          <a href="/about" className="transition hover:text-white">
+            About
+          </a>
+          <a href="/contact" className="transition hover:text-white">
+            Contact
+          </a>
+          <a href="/privacy-policy" className="transition hover:text-white">
+            Privacy Policy
           </a>
           <a href="/terms" className="transition hover:text-white">
             Terms
           </a>
-          <a href="mailto:dhileep.dk@gmail.com" className="transition hover:text-white">
-            Contact
+          <a href="/faq" className="transition hover:text-white">
+            FAQ
           </a>
         </div>
       </div>

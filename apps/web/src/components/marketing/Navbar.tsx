@@ -9,17 +9,23 @@ export default function Navbar() {
           <span className="text-sm font-semibold text-white">Passport Photo Studio</span>
         </div>
         <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-          <a href="#how" className="transition hover:text-white">
+          <a href="/#how" className="transition hover:text-white">
             How it Works
           </a>
-          <a href="#pricing" className="transition hover:text-white">
+          <a href="/about" className="transition hover:text-white">
+            About
+          </a>
+          <a href="/#pricing" className="transition hover:text-white">
             Pricing
           </a>
-          <a href="#countries" className="transition hover:text-white">
+          <a href="/#countries" className="transition hover:text-white">
             Countries
           </a>
-          <a href="#faq" className="transition hover:text-white">
+          <a href="/faq" className="transition hover:text-white">
             FAQ
+          </a>
+          <a href="/contact" className="transition hover:text-white">
+            Contact
           </a>
         </nav>
         <div className="flex items-center gap-2">
