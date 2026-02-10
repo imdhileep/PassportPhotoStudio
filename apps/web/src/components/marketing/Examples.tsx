@@ -25,7 +25,7 @@ export default function Examples() {
                 <img
                   src={example.before}
                   alt={`${example.label} before`}
-                  className="mt-2 h-44 w-full rounded-2xl object-cover"
+                  className="mt-2 h-44 w-full rounded-2xl object-contain bg-white"
                   loading="lazy"
                 />
               </div>
@@ -34,7 +34,7 @@ export default function Examples() {
                 <img
                   src={example.after}
                   alt={`${example.label} after`}
-                  className="mt-2 h-44 w-full rounded-2xl object-cover"
+                  className="mt-2 h-44 w-full rounded-2xl object-contain bg-white"
                   loading="lazy"
                 />
               </div>
