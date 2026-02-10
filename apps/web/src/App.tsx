@@ -5,6 +5,7 @@ import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import FaqPage from "./pages/FaqPage";
+import Login from "./pages/Login";
 
 export default function App() {
   const path = typeof window !== "undefined" ? window.location.pathname : "/";
@@ -36,6 +37,9 @@ export default function App() {
   }
   if (path === "/faq") {
     return <FaqPage />;
+  }
+  if (path === "/login") {
+    return <Login />;
   }
   return <Landing />;
 }

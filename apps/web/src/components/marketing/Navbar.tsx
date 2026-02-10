@@ -29,10 +29,21 @@ export default function Navbar() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="accent" onClick={() => document.getElementById("upload")?.scrollIntoView({ behavior: "smooth" })}>
+          <Button
+            variant="accent"
+            onClick={() => {
+              if (window.location.pathname !== "/") {
+                window.location.href = "/#upload";
+                return;
+              }
+              document.getElementById("upload")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
             Try Free
           </Button>
-          <Button variant="ghost">Login</Button>
+          <Button variant="ghost" onClick={() => (window.location.href = "/login")}>
+            Login
+          </Button>
         </div>
       </div>
     </header>
