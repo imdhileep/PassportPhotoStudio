@@ -9,6 +9,7 @@ import Faq from "@/components/marketing/Faq";
 import Footer from "@/components/marketing/Footer";
 import { Section } from "@/components/marketing/Section";
 import { Card } from "@/components/ui";
+import Examples from "@/components/marketing/Examples";
 
 export default function Landing() {
   const handleGenerate = (settings: {
@@ -34,6 +35,10 @@ export default function Landing() {
 
       <Section id="upload" eyebrow="Upload" title="Instant passport photo generator">
         <UploadCard onGenerate={handleGenerate} />
+      </Section>
+
+      <Section id="examples" eyebrow="Examples" title="Before / after results">
+        <Examples />
       </Section>
 
       <Section eyebrow="Trusted" title="Loved by busy travelers">
