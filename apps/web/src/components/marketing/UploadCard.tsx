@@ -34,8 +34,8 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
     <Card id="upload" className="glass mx-auto w-full max-w-4xl">
       <CardHeader>
         <div>
-          <CardTitle>Start with your photo</CardTitle>
-          <CardDescription>Upload once, then fine-tune the rest of the flow.</CardDescription>
+          <CardTitle>Start with capture or upload</CardTitle>
+          <CardDescription>Take a photo or upload once, then fine-tune the rest of the flow.</CardDescription>
         </div>
       </CardHeader>
       <div className="grid gap-6 px-6 pb-6">
@@ -50,7 +50,7 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
             }}
           />
           <span className="text-white">{fileName ?? "Drag & drop your photo here"}</span>
-          <span className="text-xs text-slate-400">PNG or JPG up to 10MB</span>
+          <span className="text-xs text-slate-400">Or capture inside the app after you start.</span>
         </label>
 
         <div className="grid gap-4 md:grid-cols-2">

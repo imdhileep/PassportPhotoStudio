@@ -30,7 +30,7 @@ export default function Hero() {
             variant="accent"
             onClick={() => document.getElementById("upload")?.scrollIntoView({ behavior: "smooth" })}
           >
-            Upload Photo
+            Upload or Capture
           </Button>
           <Button
             variant="ghost"
