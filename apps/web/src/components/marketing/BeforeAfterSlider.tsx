@@ -7,7 +7,7 @@ export default function BeforeAfterSlider() {
   const [split, setSplit] = useState(55);
   return (
     <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4">
-      <div className="relative h-64 overflow-hidden rounded-2xl">
+      <div className="relative aspect-square w-full overflow-hidden rounded-2xl">
         <img
           src={afterSrc}
           alt="After example"

@@ -22,21 +22,25 @@ export default function Examples() {
             <div className="grid gap-3 rounded-2xl bg-white/5 p-3 md:grid-cols-2">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Before</p>
-                <img
-                  src={example.before}
-                  alt={`${example.label} before`}
-                  className="mt-2 h-44 w-full rounded-2xl object-contain bg-white"
-                  loading="lazy"
-                />
+                <div className="mt-2 aspect-square w-full rounded-2xl bg-white p-3">
+                  <img
+                    src={example.before}
+                    alt={`${example.label} before`}
+                    className="h-full w-full rounded-xl object-contain"
+                    loading="lazy"
+                  />
+                </div>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">After</p>
-                <img
-                  src={example.after}
-                  alt={`${example.label} after`}
-                  className="mt-2 h-44 w-full rounded-2xl object-contain bg-white"
-                  loading="lazy"
-                />
+                <div className="mt-2 aspect-square w-full rounded-2xl bg-white p-3">
+                  <img
+                    src={example.after}
+                    alt={`${example.label} after`}
+                    className="h-full w-full rounded-xl object-contain"
+                    loading="lazy"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-between text-sm text-slate-300">

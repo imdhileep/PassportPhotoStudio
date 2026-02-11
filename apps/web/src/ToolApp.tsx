@@ -279,9 +279,9 @@ export default function ToolApp() {
         <div className="absolute left-1/2 top-1/2 h-[70%] w-[55%] -translate-x-1/2 -translate-y-1/2 rounded-[45%] border border-dashed border-white/40" />
       </div>
       {inputUrl ? (
-        <img src={inputUrl} alt="Uploaded preview" className="h-[340px] w-full object-contain" />
+        <img src={inputUrl} alt="Uploaded preview" className="aspect-square w-full object-contain" />
       ) : (
-        <video ref={videoRef} className="h-[340px] w-full object-cover" playsInline muted />
+        <video ref={videoRef} className="aspect-square w-full object-cover" playsInline muted />
       )}
       {cameraActive && liveGuide && guideStyle && (
         <div className="pointer-events-none absolute inset-0">
@@ -917,19 +917,19 @@ export default function ToolApp() {
               <img
                 src={previewUrl ?? livePreviewUrl ?? undefined}
                 alt="Processed output"
-                className="h-[340px] w-full object-contain"
+                className="aspect-square w-full object-contain"
               />
               {inputUrl && (
                 <div
                   className="pointer-events-none absolute inset-0"
                   style={{ clipPath: `inset(0 ${100 - beforeAfterSplit}% 0 0)` }}
                 >
-                  <img src={inputUrl} alt="Before" className="h-[340px] w-full object-contain" />
+                  <img src={inputUrl} alt="Before" className="aspect-square w-full object-contain" />
                 </div>
               )}
             </>
           ) : (
-            <div className="flex h-[340px] items-center justify-center text-sm text-slate-400">
+            <div className="flex aspect-square items-center justify-center text-sm text-slate-400">
               Output will appear here.
             </div>
           )}
