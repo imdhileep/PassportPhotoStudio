@@ -189,6 +189,8 @@ export default function ToolApp() {
   const outputUrlRef = useRef<string | null>(null);
   const holdStillStartRef = useRef<number | null>(null);
   const autoCaptureLockRef = useRef(false);
+  const cropDragFrameRef = useRef<number | null>(null);
+  const cropDragPendingRef = useRef<{ x: number; y: number } | null>(null);
 
   const standard = useMemo(() => {
     if (standardId !== "custom") return getStandardById(standardId);
@@ -213,6 +215,8 @@ export default function ToolApp() {
   const debouncedRefineStrength = useDebouncedValue(refineStrength, 150);
   const debouncedEdgeIntensity = useDebouncedValue(edgeIntensity, 150);
   const debouncedBackground = useDebouncedValue(backgroundColor, 120);
+  const debouncedCropOffset = useDebouncedValue(cropOffset, 120);
+  const debouncedCropZoom = useDebouncedValue(cropZoom, 120);
   const debouncedHaloTrim = useDebouncedValue(haloTrim, 150);
   const debouncedMatteTightness = useDebouncedValue(matteTightness, 150);
   const debouncedBrightness = useDebouncedValue(brightness, 150);
@@ -342,6 +346,15 @@ export default function ToolApp() {
       }
     };
   }, []);
+
+  useEffect(
+    () => () => {
+      if (cropDragFrameRef.current !== null) {
+        cancelAnimationFrame(cropDragFrameRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -505,8 +518,8 @@ export default function ToolApp() {
           hue: debouncedHue,
           autoCrop,
           manualAdjust,
-          cropOffset,
-          cropZoom,
+          cropOffset: debouncedCropOffset,
+          cropZoom: debouncedCropZoom,
           qualityMode,
           maskThreshold: manualThreshold ? maskThreshold : undefined
         });
@@ -562,8 +575,8 @@ export default function ToolApp() {
     retouchStrength,
     autoCrop,
     manualAdjust,
-    cropOffset,
-    cropZoom,
+    debouncedCropOffset,
+    debouncedCropZoom,
     inputUrl,
     retryKey,
     manualThreshold,
@@ -619,8 +632,8 @@ export default function ToolApp() {
           hue: debouncedHue,
           autoCrop,
           manualAdjust,
-          cropOffset,
-          cropZoom,
+          cropOffset: debouncedCropOffset,
+          cropZoom: debouncedCropZoom,
           qualityMode,
           maxSize: 960,
           maskThreshold: manualThreshold ? maskThreshold : undefined
@@ -713,8 +726,8 @@ export default function ToolApp() {
     retouchStrength,
     autoCrop,
     manualAdjust,
-    cropOffset,
-    cropZoom,
+    debouncedCropOffset,
+    debouncedCropZoom,
     manualThreshold,
     maskThreshold
   ]);
@@ -892,15 +905,32 @@ export default function ToolApp() {
     const preview = event.currentTarget.getBoundingClientRect();
     const deltaX = (event.clientX - dragRef.current.startX) / preview.width;
     const deltaY = (event.clientY - dragRef.current.startY) / preview.height;
-    setCropOffset({
+    const nextOffset = {
       x: clamp(dragRef.current.originX + deltaX, -0.3, 0.3),
       y: clamp(dragRef.current.originY + deltaY, -0.3, 0.3)
+    };
+    cropDragPendingRef.current = nextOffset;
+    if (cropDragFrameRef.current !== null) return;
+    cropDragFrameRef.current = requestAnimationFrame(() => {
+      cropDragFrameRef.current = null;
+      if (cropDragPendingRef.current) {
+        setCropOffset(cropDragPendingRef.current);
+        cropDragPendingRef.current = null;
+      }
     });
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!manualAdjust) return;
     dragRef.current.active = false;
+    if (cropDragFrameRef.current !== null) {
+      cancelAnimationFrame(cropDragFrameRef.current);
+      cropDragFrameRef.current = null;
+    }
+    if (cropDragPendingRef.current) {
+      setCropOffset(cropDragPendingRef.current);
+      cropDragPendingRef.current = null;
+    }
     event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
