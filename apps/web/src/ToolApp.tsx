@@ -360,6 +360,23 @@ export default function ToolApp() {
         setStandardId(match.id);
       }
     }
+    const pendingUploadRaw = localStorage.getItem("pps_pending_upload");
+    if (pendingUploadRaw) {
+      try {
+        const pendingUpload = JSON.parse(pendingUploadRaw) as { dataUrl?: string };
+        if (pendingUpload.dataUrl) {
+          setCapturedFromCamera(false);
+          setBatchItems([]);
+          setSelectedBatchId(null);
+          setInputUrl(pendingUpload.dataUrl);
+          setCurrentStep(2);
+        }
+      } catch (error) {
+        console.warn("Pending upload payload is invalid.", error);
+      } finally {
+        localStorage.removeItem("pps_pending_upload");
+      }
+    }
   }, [setStandardId]);
 
   useEffect(() => {
@@ -501,9 +518,9 @@ export default function ToolApp() {
         const report = buildQualityReport(frameWarnings, lightingStats, sharpnessScore);
         setQualityScore(report.score);
         setQualityTips(report.tips);
-        setPreviewUrl(canvas.toDataURL("image/png"));
         const newUrl = await toObjectUrl(canvas, outputUrlRef.current);
         outputUrlRef.current = newUrl;
+        setPreviewUrl(newUrl);
         setOutputUrl(newUrl);
         if (livePreview) {
           setLivePreview(false);
@@ -569,7 +586,7 @@ export default function ToolApp() {
         return;
       }
       const now = performance.now();
-      if (liveProcessingRef.current || now - lastFrameRef.current < 250) {
+      if (liveProcessingRef.current || now - lastFrameRef.current < 400) {
         requestAnimationFrame(loop);
         return;
       }
@@ -605,13 +622,14 @@ export default function ToolApp() {
           cropOffset,
           cropZoom,
           qualityMode,
+          maxSize: 960,
           maskThreshold: manualThreshold ? maskThreshold : undefined
         });
         const sharpnessScore = computeSharpnessScore(bitmap);
         const report = buildQualityReport(result.warnings, lightingStats, sharpnessScore);
         bitmap.close();
         if (!cancelled) {
-          setLivePreviewUrl(result.canvas.toDataURL("image/png"));
+          setLivePreviewUrl(null);
           setLiveWarnings(result.warnings);
           setLiveGuide(result.guide ?? null);
           drawPreviewCanvas(outputPreviewRef.current, result.canvas);
@@ -912,13 +930,17 @@ export default function ToolApp() {
               Live {liveFps} fps
             </div>
           )}
-          {previewUrl || livePreviewUrl ? (
+          {previewUrl || (cameraActive && livePreview) ? (
             <>
-              <img
-                src={previewUrl ?? livePreviewUrl ?? undefined}
-                alt="Processed output"
-                className="aspect-square w-full object-contain"
-              />
+              {previewUrl ? (
+                <img src={previewUrl} alt="Processed output" className="aspect-square w-full object-contain" />
+              ) : (
+                <canvas
+                  ref={outputPreviewRef}
+                  aria-label="Live processed preview"
+                  className="aspect-square w-full object-contain"
+                />
+              )}
               {inputUrl && (
                 <div
                   className="pointer-events-none absolute inset-0"

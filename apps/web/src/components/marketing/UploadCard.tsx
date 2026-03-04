@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button, Card, CardDescription, CardHeader, CardTitle } from "@/components/ui";
 import {
   Select,
@@ -13,6 +13,7 @@ type UploadSettings = {
   country: string;
   docType: string;
   output: string;
+  fileDataUrl?: string;
   fileName?: string;
 };
 
@@ -28,7 +29,44 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
   const [country, setCountry] = useState(countryOptions[0] ?? "United States");
   const [docType, setDocType] = useState("Passport");
   const [output, setOutput] = useState("Digital");
+  const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | undefined>();
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileSelected = (nextFile?: File) => {
+    setUploadError(null);
+    setFile(nextFile ?? null);
+    setFileName(nextFile?.name);
+  };
+
+  const readFileAsDataUrl = (source: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read selected file."));
+      reader.readAsDataURL(source);
+    });
+
+  const handleGenerateClick = async () => {
+    try {
+      let fileDataUrl: string | undefined;
+      if (file) {
+        fileDataUrl = await readFileAsDataUrl(file);
+      }
+      onGenerate({
+        country,
+        docType,
+        output,
+        fileName,
+        fileDataUrl
+      });
+    } catch (error) {
+      console.error("Could not prepare upload", error);
+      setUploadError("Could not read the selected image. Please try another file.");
+    }
+  };
 
   return (
     <Card id="upload" className="glass mx-auto w-full max-w-4xl">
@@ -39,18 +77,44 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
         </div>
       </CardHeader>
       <div className="grid gap-6 px-6 pb-6">
-        <label className="flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 bg-white/5 px-4 text-sm text-slate-300 transition hover:border-white/50">
+        <label
+          className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 text-sm text-slate-300 transition ${
+            isDragging
+              ? "border-ocean bg-ocean/10"
+              : "border-white/20 bg-white/5 hover:border-white/50"
+          }`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDragging(false);
+            handleFileSelected(event.dataTransfer.files?.[0]);
+          }}
+        >
           <input
+            ref={inputRef}
             type="file"
             className="hidden"
             accept="image/*"
             onChange={(event) => {
-              const file = event.target.files?.[0];
-              setFileName(file?.name);
+              handleFileSelected(event.target.files?.[0]);
             }}
           />
           <span className="text-white">{fileName ?? "Drag & drop your photo here"}</span>
           <span className="text-xs text-slate-400">Or capture inside the app after you start.</span>
+          <button
+            type="button"
+            className="text-xs text-ocean hover:underline"
+            onClick={(event) => {
+              event.preventDefault();
+              inputRef.current?.click();
+            }}
+          >
+            Choose from device
+          </button>
         </label>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -103,12 +167,13 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
             <Button
               variant="accent"
               className="w-full"
-              onClick={() => onGenerate({ country, docType, output, fileName })}
+              onClick={handleGenerateClick}
             >
               Generate Photo
             </Button>
           </div>
         </div>
+        {uploadError && <p className="text-xs text-rose-300">{uploadError}</p>}
         <p className="text-xs text-slate-400">
           TODO: Connect this form to your upload/processing API to kick off generation.
         </p>

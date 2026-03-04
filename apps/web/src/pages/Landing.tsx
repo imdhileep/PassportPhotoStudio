@@ -16,12 +16,22 @@ export default function Landing() {
     country: string;
     docType: string;
     output: string;
+    fileDataUrl?: string;
     fileName?: string;
   }) => {
     const params = new URLSearchParams();
     params.set("country", settings.country);
     params.set("doc", settings.docType);
     params.set("output", settings.output);
+    if (settings.fileDataUrl) {
+      localStorage.setItem(
+        "pps_pending_upload",
+        JSON.stringify({
+          dataUrl: settings.fileDataUrl,
+          name: settings.fileName ?? "upload-image"
+        })
+      );
+    }
     if (settings.fileName) {
       params.set("file", settings.fileName);
     }

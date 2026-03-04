@@ -1,16 +1,28 @@
+import { Suspense, lazy, useEffect } from "react";
 import Landing from "./pages/Landing";
-import AppShell from "./pages/AppShell";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Terms from "./pages/Terms";
-import FaqPage from "./pages/FaqPage";
-import Login from "./pages/Login";
+
+const AppShell = lazy(() => import("./pages/AppShell"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const FaqPage = lazy(() => import("./pages/FaqPage"));
+const Login = lazy(() => import("./pages/Login"));
+
+const RouteFallback = () => (
+  <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
+    <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm backdrop-blur">
+      Loading experience...
+    </div>
+  </div>
+);
 
 export default function App() {
   const path = typeof window !== "undefined" ? window.location.pathname : "/";
   const canonicalPath = path === "/" ? "" : path;
-  if (typeof document !== "undefined") {
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
     const href = `https://www.passportphoto.art${canonicalPath}`;
     let link = document.querySelector<HTMLLinkElement>("link[rel='canonical']");
     if (!link) {
@@ -19,27 +31,56 @@ export default function App() {
       document.head.appendChild(link);
     }
     link.href = href;
-  }
+  }, [canonicalPath]);
+
   if (path.startsWith("/app")) {
-    return <AppShell />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <AppShell />
+      </Suspense>
+    );
   }
   if (path === "/about") {
-    return <About />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <About />
+      </Suspense>
+    );
   }
   if (path === "/contact") {
-    return <Contact />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <Contact />
+      </Suspense>
+    );
   }
   if (path === "/privacy-policy") {
-    return <PrivacyPolicy />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <PrivacyPolicy />
+      </Suspense>
+    );
   }
   if (path === "/terms") {
-    return <Terms />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <Terms />
+      </Suspense>
+    );
   }
   if (path === "/faq") {
-    return <FaqPage />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <FaqPage />
+      </Suspense>
+    );
   }
   if (path === "/login") {
-    return <Login />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <Login />
+      </Suspense>
+    );
   }
   return <Landing />;
 }
