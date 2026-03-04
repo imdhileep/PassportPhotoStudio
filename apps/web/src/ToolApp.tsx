@@ -140,8 +140,9 @@ export default function ToolApp() {
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [theme, setTheme] = useLocalStorage<"dark" | "light">("pps_theme", "dark");
 
-  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
-  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useLocalStorage<{ x: number; y: number }>("pps_crop_offset", { x: 0, y: 0 });
+  const [cropZoom, setCropZoom] = useLocalStorage<number>("pps_crop_zoom", 1);
+  const [framingSavedAt, setFramingSavedAt] = useState<number | null>(null);
   const [livePreviewUrl, setLivePreviewUrl] = useState<string | null>(null);
   const [liveWarnings, setLiveWarnings] = useState<WarningItem[]>([]);
   const [liveGuide, setLiveGuide] = useState<LiveGuide | null>(null);
@@ -909,6 +910,7 @@ export default function ToolApp() {
       x: clamp(dragRef.current.originX + deltaX, -0.3, 0.3),
       y: clamp(dragRef.current.originY + deltaY, -0.3, 0.3)
     };
+    setFramingSavedAt(null);
     cropDragPendingRef.current = nextOffset;
     if (cropDragFrameRef.current !== null) return;
     cropDragFrameRef.current = requestAnimationFrame(() => {
@@ -932,6 +934,19 @@ export default function ToolApp() {
       cropDragPendingRef.current = null;
     }
     event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const saveFraming = () => {
+    // Stored automatically by useLocalStorage; timestamp is for user feedback only.
+    setCropOffset({ x: cropOffset.x, y: cropOffset.y });
+    setCropZoom(cropZoom);
+    setFramingSavedAt(Date.now());
+  };
+
+  const resetFraming = () => {
+    setCropOffset({ x: 0, y: 0 });
+    setCropZoom(1);
+    setFramingSavedAt(null);
   };
 
   const outputPreviewCard = (
@@ -1481,17 +1496,76 @@ export default function ToolApp() {
 
                     {manualAdjust && (
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold">Zoom</p>
-                          <span className="text-xs text-slate-400">{`${Math.round(cropZoom * 100)}%`}</span>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold">Framing controls</p>
+                          {framingSavedAt ? (
+                            <span className="text-xs text-emerald-300">Saved</span>
+                          ) : (
+                            <span className="text-xs text-slate-400">Hold and drag bars</span>
+                          )}
                         </div>
-                        <Slider
-                          value={[cropZoom]}
-                          min={0.6}
-                          max={1.8}
-                          step={0.01}
-                          onValueChange={([val]) => setCropZoom(val)}
-                        />
+
+                        <div className="grid gap-4">
+                          <div>
+                            <div className="mb-1 flex items-center justify-between">
+                              <p className="text-xs text-slate-300">Horizontal position</p>
+                              <span className="text-xs text-slate-400">{`${Math.round(cropOffset.x * 100)}%`}</span>
+                            </div>
+                            <Slider
+                              value={[cropOffset.x]}
+                              min={-0.3}
+                              max={0.3}
+                              step={0.005}
+                              onValueChange={([val]) => {
+                                setCropOffset((prev) => ({ ...prev, x: val }));
+                                setFramingSavedAt(null);
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <div className="mb-1 flex items-center justify-between">
+                              <p className="text-xs text-slate-300">Vertical position</p>
+                              <span className="text-xs text-slate-400">{`${Math.round(cropOffset.y * 100)}%`}</span>
+                            </div>
+                            <Slider
+                              value={[cropOffset.y]}
+                              min={-0.3}
+                              max={0.3}
+                              step={0.005}
+                              onValueChange={([val]) => {
+                                setCropOffset((prev) => ({ ...prev, y: val }));
+                                setFramingSavedAt(null);
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <div className="mb-1 flex items-center justify-between">
+                              <p className="text-xs text-slate-300">Zoom</p>
+                              <span className="text-xs text-slate-400">{`${Math.round(cropZoom * 100)}%`}</span>
+                            </div>
+                            <Slider
+                              value={[cropZoom]}
+                              min={0.6}
+                              max={1.8}
+                              step={0.01}
+                              onValueChange={([val]) => {
+                                setCropZoom(val);
+                                setFramingSavedAt(null);
+                              }}
+                            />
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="ghost" onClick={saveFraming}>
+                              Save framing
+                            </Button>
+                            <Button variant="ghost" onClick={resetFraming}>
+                              Reset framing
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     )}
 
