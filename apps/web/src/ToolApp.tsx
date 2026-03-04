@@ -170,6 +170,10 @@ export default function ToolApp() {
   const [onboardingDismissed, setOnboardingDismissed] = useLocalStorage<boolean>("pps_onboarding_dismissed", false);
   const [qualityScore, setQualityScore] = useState(0);
   const [qualityTips, setQualityTips] = useState<string[]>([]);
+  const [serverOrderId, setServerOrderId] = useState<string | null>(null);
+  const [serverOrderStatus, setServerOrderStatus] = useState<string | null>(null);
+  const [serverQueueRemaining, setServerQueueRemaining] = useState<number | null>(null);
+  const [serverDownloads, setServerDownloads] = useState<{ jpg?: string; png?: string; pdf?: string }>({});
   const [autoCapture, setAutoCapture] = useLocalStorage<boolean>("pps_auto_capture", false);
   const [holdStillCountdown, setHoldStillCountdown] = useState<number | null>(null);
   const [autoRetouch, setAutoRetouch] = useLocalStorage<boolean>("pps_auto_retouch", true);
@@ -374,6 +378,10 @@ export default function ToolApp() {
         setStandardId(match.id);
       }
     }
+    const orderId = params.get("orderId");
+    if (orderId) {
+      setServerOrderId(orderId);
+    }
     const pendingUploadRaw = localStorage.getItem("pps_pending_upload");
     if (pendingUploadRaw) {
       try {
@@ -397,6 +405,47 @@ export default function ToolApp() {
     const sourceUrl = outputUrl ?? livePreviewUrl;
     if (!sourceUrl) return;
   }, [outputUrl, livePreviewUrl]);
+
+  useEffect(() => {
+    if (!appConfig.serverEnabled || !serverOrderId) return;
+    let cancelled = false;
+    let timer: number | null = null;
+    const poll = async () => {
+      try {
+        const response = await fetch(`${appConfig.serverUrl}/api/orders/${serverOrderId}`);
+        if (!response.ok) return;
+        const order = await response.json();
+        if (cancelled) return;
+        setServerOrderStatus(order.status ?? null);
+        if (order.queueAvailableAt) {
+          const remaining = Math.max(0, Math.ceil((new Date(order.queueAvailableAt).getTime() - Date.now()) / 1000));
+          setServerQueueRemaining(remaining);
+        } else {
+          setServerQueueRemaining(null);
+        }
+        setServerDownloads({
+          jpg: order.processedImagePath
+            ? `${appConfig.serverUrl}/api/orders/${serverOrderId}/download?format=jpg`
+            : undefined,
+          png: order.processedPngPath
+            ? `${appConfig.serverUrl}/api/orders/${serverOrderId}/download?format=png`
+            : undefined,
+          pdf: order.pdfPath ? `${appConfig.serverUrl}/api/orders/${serverOrderId}/download?format=pdf` : undefined
+        });
+      } catch (error) {
+        console.error("Order polling failed", error);
+      } finally {
+        if (!cancelled) {
+          timer = window.setTimeout(poll, 3000);
+        }
+      }
+    };
+    poll();
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [serverOrderId]);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -1566,6 +1615,39 @@ export default function ToolApp() {
                             </Button>
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {serverOrderId && (
+                      <div className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-3 text-xs text-emerald-100">
+                        <p>
+                          Order created: <span className="font-semibold">{serverOrderId}</span>
+                          {serverOrderStatus ? ` • ${serverOrderStatus}` : ""}
+                        </p>
+                        {serverOrderStatus === "QUEUED" && serverQueueRemaining !== null && (
+                          <p className="mt-1 text-emerald-200">
+                            In free queue. Estimated processing in {serverQueueRemaining}s.
+                          </p>
+                        )}
+                        {(serverDownloads.jpg || serverDownloads.png || serverDownloads.pdf) && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {serverDownloads.jpg && (
+                              <a className="underline" href={serverDownloads.jpg}>
+                                Download JPG
+                              </a>
+                            )}
+                            {serverDownloads.png && (
+                              <a className="underline" href={serverDownloads.png}>
+                                Download PNG
+                              </a>
+                            )}
+                            {serverDownloads.pdf && (
+                              <a className="underline" href={serverDownloads.pdf}>
+                                Download A4 PDF
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 

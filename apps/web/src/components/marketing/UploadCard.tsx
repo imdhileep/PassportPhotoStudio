@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { Button, Card, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Card, CardDescription, CardHeader, CardTitle, Switch } from "@/components/ui";
 import {
   Select,
   SelectContent,
@@ -8,11 +8,16 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { passportStandards } from "@passport/ai";
+import { appConfig } from "@/config";
 
 type UploadSettings = {
   country: string;
   docType: string;
   output: string;
+  templateId?: string;
+  prioritySkipQueue?: boolean;
+  humanVerificationAddon?: boolean;
+  clothingAdjustmentAddon?: boolean;
   fileDataUrl?: string;
   fileName?: string;
 };
@@ -22,18 +27,95 @@ type UploadCardProps = {
 };
 
 export default function UploadCard({ onGenerate }: UploadCardProps) {
-  const countryOptions = useMemo(
-    () => passportStandards.map((standard) => standard.label),
-    []
-  );
+  const fallbackCountries = useMemo(() => passportStandards.map((standard) => standard.label), []);
+  const fallbackDocTypes = useMemo(() => ["Passport", "Visa", "ID Card", "OPT EAD"], []);
+  const [templates, setTemplates] = useState<
+    Array<{
+      id: string;
+      country: string;
+      documentType: string;
+      name: string;
+      rules: {
+        allowCrop: boolean;
+        allowResize: boolean;
+        allowBackgroundReplace: boolean;
+        allowFaceRetouch: boolean;
+        notes: string;
+      };
+    }>
+  >([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+
+  const countryOptions = useMemo(() => {
+    if (templates.length === 0) return fallbackCountries;
+    return Array.from(new Set(templates.map((template) => template.country)));
+  }, [fallbackCountries, templates]);
+
   const [country, setCountry] = useState(countryOptions[0] ?? "United States");
-  const [docType, setDocType] = useState("Passport");
+  const [docType, setDocType] = useState(fallbackDocTypes[0]);
   const [output, setOutput] = useState("Digital");
+  const [prioritySkipQueue, setPrioritySkipQueue] = useState(false);
+  const [humanVerificationAddon, setHumanVerificationAddon] = useState(false);
+  const [clothingAdjustmentAddon, setClothingAdjustmentAddon] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | undefined>();
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const docTypeOptions = useMemo(() => {
+    if (templates.length === 0) return fallbackDocTypes;
+    const filtered = templates.filter((template) => template.country === country);
+    if (filtered.length === 0) return fallbackDocTypes;
+    return Array.from(new Set(filtered.map((template) => template.documentType)));
+  }, [country, fallbackDocTypes, templates]);
+
+  const selectedTemplate = useMemo(() => {
+    if (templates.length === 0) return null;
+    return (
+      templates.find((template) => template.country === country && template.documentType === docType) ?? null
+    );
+  }, [country, docType, templates]);
+
+  useEffect(() => {
+    if (!appConfig.serverEnabled) return;
+    let cancelled = false;
+    const run = async () => {
+      setTemplatesLoading(true);
+      setTemplatesError(null);
+      try {
+        const response = await fetch(`${appConfig.serverUrl}/api/templates`);
+        if (!response.ok) throw new Error("Template API unavailable");
+        const data = await response.json();
+        if (cancelled) return;
+        setTemplates(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Template fetch failed", error);
+        if (!cancelled) setTemplatesError("Template catalog unavailable. Using local presets.");
+      } finally {
+        if (!cancelled) setTemplatesLoading(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (countryOptions.length === 0) return;
+    if (!countryOptions.includes(country)) {
+      setCountry(countryOptions[0]);
+    }
+  }, [country, countryOptions]);
+
+  useEffect(() => {
+    if (docTypeOptions.length === 0) return;
+    if (!docTypeOptions.includes(docType)) {
+      setDocType(docTypeOptions[0]);
+    }
+  }, [docType, docTypeOptions]);
 
   const handleFileSelected = (nextFile?: File) => {
     setUploadError(null);
@@ -59,6 +141,10 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
         country,
         docType,
         output,
+        templateId: selectedTemplate?.id,
+        prioritySkipQueue,
+        humanVerificationAddon,
+        clothingAdjustmentAddon,
         fileName,
         fileDataUrl
       });
@@ -140,7 +226,7 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
                 <SelectValue placeholder="Choose document" />
               </SelectTrigger>
               <SelectContent>
-                {["Passport", "Visa", "ID Card", "OPT EAD"].map((item) => (
+                {docTypeOptions.map((item) => (
                   <SelectItem key={item} value={item}>
                     {item}
                   </SelectItem>
@@ -173,10 +259,59 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
             </Button>
           </div>
         </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Skip queue</p>
+                <p className="text-xs text-slate-400">Paid priority processing.</p>
+              </div>
+              <Switch checked={prioritySkipQueue} onCheckedChange={setPrioritySkipQueue} />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Human verification</p>
+                <p className="text-xs text-slate-400">Manual review add-on.</p>
+              </div>
+              <Switch checked={humanVerificationAddon} onCheckedChange={setHumanVerificationAddon} />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Clothing adjustment</p>
+                <p className="text-xs text-slate-400">Premium manual service.</p>
+              </div>
+              <Switch checked={clothingAdjustmentAddon} onCheckedChange={setClothingAdjustmentAddon} />
+            </div>
+          </div>
+        </div>
+        {templatesLoading && <p className="text-xs text-slate-400">Loading country templates...</p>}
+        {templatesError && <p className="text-xs text-amber-300">{templatesError}</p>}
+        {selectedTemplate && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
+            <p className="font-semibold text-white">Compliance rules</p>
+            <p className="mt-1">{selectedTemplate.rules.notes}</p>
+            <p className="mt-2 text-slate-400">
+              Allowed edits:{" "}
+              {[
+                selectedTemplate.rules.allowCrop ? "crop" : null,
+                selectedTemplate.rules.allowResize ? "resize" : null,
+                selectedTemplate.rules.allowBackgroundReplace ? "background replacement" : null,
+                selectedTemplate.rules.allowFaceRetouch ? "face retouch" : "no face retouch"
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          </div>
+        )}
         {uploadError && <p className="text-xs text-rose-300">{uploadError}</p>}
-        <p className="text-xs text-slate-400">
-          TODO: Connect this form to your upload/processing API to kick off generation.
-        </p>
+        <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 p-3 text-xs text-amber-100">
+          Compliance notice: the app applies edits only if the selected template allows them. Facial retouching is
+          disabled for official-use exports.
+        </div>
       </div>
     </Card>
   );

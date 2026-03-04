@@ -10,12 +10,17 @@ import Footer from "@/components/marketing/Footer";
 import { Section } from "@/components/marketing/Section";
 import { Card } from "@/components/ui";
 import Examples from "@/components/marketing/Examples";
+import { appConfig } from "@/config";
 
 export default function Landing() {
-  const handleGenerate = (settings: {
+  const handleGenerate = async (settings: {
     country: string;
     docType: string;
     output: string;
+    templateId?: string;
+    prioritySkipQueue?: boolean;
+    humanVerificationAddon?: boolean;
+    clothingAdjustmentAddon?: boolean;
     fileDataUrl?: string;
     fileName?: string;
   }) => {
@@ -31,6 +36,31 @@ export default function Landing() {
           name: settings.fileName ?? "upload-image"
         })
       );
+    }
+    if (settings.templateId) {
+      params.set("templateId", settings.templateId);
+    }
+    if (appConfig.serverEnabled && settings.fileDataUrl && settings.templateId) {
+      try {
+        const blob = await fetch(settings.fileDataUrl).then((response) => response.blob());
+        const form = new FormData();
+        form.append("templateId", settings.templateId);
+        form.append("prioritySkipQueue", String(!!settings.prioritySkipQueue));
+        form.append("humanVerificationAddon", String(!!settings.humanVerificationAddon));
+        form.append("clothingAdjustmentAddon", String(!!settings.clothingAdjustmentAddon));
+        form.append("file", blob, settings.fileName ?? "upload-image.png");
+        const response = await fetch(`${appConfig.serverUrl}/api/orders`, {
+          method: "POST",
+          body: form
+        });
+        if (response.ok) {
+          const payload = await response.json();
+          params.set("orderId", payload.order.id);
+          localStorage.setItem("pps_pending_order", JSON.stringify(payload.order));
+        }
+      } catch (error) {
+        console.error("Order creation failed from landing", error);
+      }
     }
     if (settings.fileName) {
       params.set("file", settings.fileName);
