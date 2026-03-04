@@ -261,6 +261,11 @@ export default function ToolApp() {
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
   const warningIds = new Set([...displayWarnings, ...displayLightingWarnings].map((warning) => warning.id));
+  const previewAspect = Math.max(0.2, standard.widthMm / standard.heightMm);
+  const previewFrameStyle =
+    previewAspect >= 1
+      ? ({ width: "100%", aspectRatio: `${standard.widthMm} / ${standard.heightMm}` } as const)
+      : ({ height: "100%", aspectRatio: `${standard.widthMm} / ${standard.heightMm}` } as const);
   const stepTitle = stepLabels[activeStep - 1] ?? `Step ${activeStep}`;
   const isAppShell = typeof window !== "undefined" && window.location.pathname.startsWith("/app");
   const canWizardNext =
@@ -1009,7 +1014,7 @@ export default function ToolApp() {
       <div className="grid gap-4">
         <div
           className={cn(
-            "relative overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70",
+            "relative h-[320px] overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70 sm:h-[360px] lg:h-[400px]",
             manualAdjust ? "cursor-move" : "cursor-default"
           )}
           onPointerDown={handlePointerDown}
@@ -1024,31 +1029,36 @@ export default function ToolApp() {
               Live {liveFps} fps
             </div>
           )}
-          {previewUrl || (cameraActive && livePreview) ? (
-            <>
-              {previewUrl ? (
-                <img src={previewUrl} alt="Processed output" className="aspect-square w-full object-contain" />
+          <div className="flex h-full w-full items-center justify-center p-3 sm:p-4">
+            <div
+              className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/40"
+              style={previewFrameStyle}
+            >
+              {previewUrl || (cameraActive && livePreview) ? (
+                <>
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Processed output" className="h-full w-full object-contain" />
+                  ) : (
+                    <canvas
+                      ref={outputPreviewRef}
+                      aria-label="Live processed preview"
+                      className="h-full w-full object-contain"
+                    />
+                  )}
+                  {inputUrl && (
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{ clipPath: `inset(0 ${100 - beforeAfterSplit}% 0 0)` }}
+                    >
+                      <img src={inputUrl} alt="Before" className="h-full w-full object-contain" />
+                    </div>
+                  )}
+                </>
               ) : (
-                <canvas
-                  ref={outputPreviewRef}
-                  aria-label="Live processed preview"
-                  className="aspect-square w-full object-contain"
-                />
+                <div className="flex h-full items-center justify-center text-sm text-slate-400">Output will appear here.</div>
               )}
-              {inputUrl && (
-                <div
-                  className="pointer-events-none absolute inset-0"
-                  style={{ clipPath: `inset(0 ${100 - beforeAfterSplit}% 0 0)` }}
-                >
-                  <img src={inputUrl} alt="Before" className="aspect-square w-full object-contain" />
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex aspect-square items-center justify-center text-sm text-slate-400">
-              Output will appear here.
             </div>
-          )}
+          </div>
           <div className="absolute bottom-3 left-3 rounded-full bg-black/50 px-3 py-1 text-[10px] text-white">
             {`Live:${livePreview ? "on" : "off"} Cam:${cameraActive ? "on" : "off"} Models:${
               modelStatus.ready ? "ready" : "loading"
