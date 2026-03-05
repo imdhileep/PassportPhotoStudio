@@ -2103,6 +2103,7 @@ export default function ToolApp() {
             transition={prefersReducedMotion ? undefined : { duration: 0.4, delay: 0.05 }}
             className="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start"
           >
+            {outputPreviewCard}
             <Card>
               <CardHeader>
                 <div>
@@ -2136,7 +2137,6 @@ export default function ToolApp() {
                 </div>
               </div>
             </Card>
-            {outputPreviewCard}
             {showModelStatus && (
               <Card>
                 <CardHeader>
