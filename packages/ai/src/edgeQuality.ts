@@ -838,14 +838,20 @@ const antialiasBoundaryAlpha = (
   strength = 1
 ) => {
   const { width, height } = image;
-  const blurred = boxBlurAlpha(alpha, width, height, 1);
+  const blurred = boxBlurAlpha(alpha, width, height, 2);
   const gradient = sobelMagnitude(image);
-  const band = buildBands(binary, width, height, 3);
+  const band = buildBands(binary, width, height, 4);
+  const subjectBox = estimateBoundingBox(binary, width, height);
+  const subjectHeight = Math.max(1, subjectBox.maxY - subjectBox.minY + 1);
+  const torsoStartY = subjectBox.minY + subjectHeight * 0.34;
   const out = alpha.slice();
+  const pxY = (i: number) => Math.floor(i / width);
   for (let i = 0; i < out.length; i += 1) {
     if (!band.inside[i] && !band.outside[i]) continue;
     const detailLock = gradient[i];
-    const weight = clamp((1 - detailLock) * 0.55 * strength);
+    const y = pxY(i);
+    const torsoBoost = y >= torsoStartY ? 1.25 : 1;
+    const weight = clamp((1 - detailLock) * 0.8 * strength * torsoBoost);
     out[i] = out[i] * (1 - weight) + blurred[i] * weight;
   }
   return out;
