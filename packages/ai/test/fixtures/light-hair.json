@@ -1,0 +1,17 @@
+{
+  "name": "light-hair",
+  "width": 220,
+  "height": 260,
+  "background": {
+    "type": "solid",
+    "color": [252, 252, 252]
+  },
+  "subject": {
+    "skin": [220, 184, 160],
+    "hair": [182, 156, 120],
+    "shirt": [75, 120, 170]
+  },
+  "noise": 0.015,
+  "halo": 0.21,
+  "spill": 0.19
+}

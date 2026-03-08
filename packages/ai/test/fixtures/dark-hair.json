@@ -1,0 +1,17 @@
+{
+  "name": "dark-hair",
+  "width": 220,
+  "height": 260,
+  "background": {
+    "type": "solid",
+    "color": [245, 245, 245]
+  },
+  "subject": {
+    "skin": [186, 146, 122],
+    "hair": [24, 22, 20],
+    "shirt": [62, 96, 140]
+  },
+  "noise": 0.018,
+  "halo": 0.24,
+  "spill": 0.22
+}

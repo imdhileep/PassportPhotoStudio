@@ -7,6 +7,7 @@ Production-grade, offline-capable passport photo editor with AI background remov
 - Background removal via MediaPipe ImageSegmenter with GPU-to-CPU fallback.
 - Face landmark alignment + auto-crop with warnings (tilt, size, framing).
 - Manual crop adjust (drag/zoom) and edge refinement controls.
+- Auto edge tuning: adaptive halo trim, matte tighten, feather, refine strength, edge intensity.
 - Export: PNG/JPG and 4x6 print sheet.
 - Offline-ready models and wasm (local-only in offline mode).
 - Optional local server for JPG conversion + export history + share links.
@@ -110,6 +111,7 @@ VITE_SERVER_URL=http://localhost:4310
 - `npm run preview` - preview production build
 - `npm run offline:setup` - download offline wasm/models
 - `npm --workspace apps/server run test` - run server unit tests
+- `npm --workspace packages/ai run test` - run AI matte + edge-quality tests
 
 ## Configuration
 Client config uses environment variables:
@@ -127,3 +129,53 @@ Server queue controls:
 - Camera access requires HTTPS or localhost.
 - For best results, use even front lighting and a plain background.
 - Compliance disclaimer: template policies can allow crop/resize/background replacement, but facial retouching is disabled.
+
+## Edge Auto-Tune + Matte Pipeline
+The editor now computes image-specific edge settings on upload/capture and applies a multi-stage matte refinement pipeline.
+
+Metrics used for tuning:
+- `haloScore`: bright fringe risk near boundary (inside/outside edge band).
+- `spillScore`: background color bleed into subject near boundary.
+- `jaggyScore`: high-frequency boundary roughness.
+- `hairEdgeDensity`: fine edge texture density near upper head boundary.
+- `contrastScore`: local contrast across boundary.
+- `maskConfidence`: confidence near edge band (confidence mask or inferred alpha smoothness).
+
+Auto-tuned controls:
+- `haloTrim` (0..40)
+- `matteTighten` (0..100)
+- `feather` (0..20)
+- `refineStrength` (0..100)
+- `edgeIntensity` (0..100)
+- `edgeRefineToggle` (boolean)
+
+Refinement order:
+1. close holes
+2. remove islands/noise
+3. stabilize soft alpha (closing/opening + soft blend)
+4. edge-aware erosion (`haloTrim`)
+5. edge-aware alpha contrast (`matteTighten`)
+6. guided refinement (`refineStrength`)
+7. adaptive feathering (`feather`, capped to subtle 1-2px behavior for passport edges)
+8. clamp alpha [0..1]
+
+Post-processing:
+- `removeEdgeHalo(...)`: boundary color decontamination for hair/beard/shoulders.
+- `compositeOnWhiteBackground(...)`: composites against pure white without dirty blend carry-over.
+- `validateBackgroundWhite(...)`: enforces exact white background for low-alpha/background pixels and validates borders.
+
+## AI Passport Requirement Checker (Default)
+Every processed preview now runs an automatic passport check and shows results in the right panel under **Key Photo Requirements**.
+
+Checks included:
+- Dimensions (US 2x2 requirement check)
+- Background uniformity (plain white/off-white)
+- Head size estimate (top hair to chin, 25-35 mm target)
+- Expression (eyes open, mouth closed)
+- Appearance heuristics (possible eyeglasses)
+- Quality (resolution, sharpness, shadow balance, filter usage)
+- Print material reminder (manual check)
+
+Notes:
+- This is guidance, not legal acceptance guarantee.
+- Religious head covering exceptions and print-paper verification require manual confirmation.

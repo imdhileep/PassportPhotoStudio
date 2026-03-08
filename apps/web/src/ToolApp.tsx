@@ -6,15 +6,28 @@ import { cn } from "@/lib/utils";
 import { useLocalStorage } from "@/features/useLocalStorage";
 import { Stepper } from "@/components/Stepper";
 import {
+  autoTuneEdgeParams,
   buildAlphaMask,
   centerCrop,
+  compositeOnWhiteBackground,
+  compositeWithBackground,
   cropFromLandmarks,
   detectFace,
+  edgeQualityFromMetrics,
+  HEAD_HEIGHT_MAX_RATIO,
+  HEAD_HEIGHT_MIN_RATIO,
   getStandardById,
   loadVisionTasks,
+  OUTPUT_ASPECT_RATIO,
+  evaluatePassportRequirements,
   passportStandards,
-  refineMask,
+  refineSegmentationMask,
+  removeEdgeHalo,
   segmentPerson,
+  validateBackgroundWhite,
+  type EdgeParams,
+  type EdgeMetrics,
+  type PassportRequirementReport,
   type CropRect,
   type PassportStandard,
   type WarningItem
@@ -97,6 +110,16 @@ const warningCard = (warning: WarningItem) => (
   </div>
 );
 
+const defaultRequirementChecklist = [
+  "Dimensions: 2 x 2 inches (51 x 51 mm).",
+  "Background: Plain white or off-white.",
+  "Head size: 1 to 1 3/8 inches (25-35 mm).",
+  "Expression: Neutral expression, mouth closed, eyes open.",
+  "Appearance: No hats/head coverings (except religious), no eyeglasses.",
+  "Quality: High-resolution, no shadows, no digital filters/enhancements.",
+  "Material: Matte or glossy photo-quality paper."
+];
+
 export default function ToolApp() {
   const [inputUrl, setInputUrl] = useState<string | null>(null);
   const [inputImage, setInputImage] = useState<HTMLImageElement | null>(null);
@@ -170,6 +193,10 @@ export default function ToolApp() {
   const [onboardingDismissed, setOnboardingDismissed] = useLocalStorage<boolean>("pps_onboarding_dismissed", false);
   const [qualityScore, setQualityScore] = useState(0);
   const [qualityTips, setQualityTips] = useState<string[]>([]);
+  const [edgeQuality, setEdgeQuality] = useState<{ score: number; label: string } | null>(null);
+  const [passportReport, setPassportReport] = useState<PassportRequirementReport | null>(null);
+  const [autoEdgeParams, setAutoEdgeParams] = useState<EdgeParams | null>(null);
+  const [autoTuneLoading, setAutoTuneLoading] = useState(false);
   const [serverOrderId, setServerOrderId] = useState<string | null>(null);
   const [serverOrderStatus, setServerOrderStatus] = useState<string | null>(null);
   const [serverQueueRemaining, setServerQueueRemaining] = useState<number | null>(null);
@@ -196,6 +223,7 @@ export default function ToolApp() {
   const autoCaptureLockRef = useRef(false);
   const cropDragFrameRef = useRef<number | null>(null);
   const cropDragPendingRef = useRef<{ x: number; y: number } | null>(null);
+  const autoTuneKeyRef = useRef<string | null>(null);
 
   const standard = useMemo(() => {
     if (standardId !== "custom") return getStandardById(standardId);
@@ -244,8 +272,9 @@ export default function ToolApp() {
   } as const;
   const edgePresetSettings = edgePresetConfig[edgePreset];
   const effectiveFeather = Math.max(0, debouncedFeather + edgePresetSettings.featherBoost);
-  const effectiveRefineStrength = Math.max(1, debouncedRefineStrength + edgePresetSettings.strengthBoost);
+  const effectiveRefineStrength = Math.max(0, debouncedRefineStrength + edgePresetSettings.strengthBoost);
   const effectiveEdgeIntensity = debouncedEdgeIntensity + edgePresetSettings.edgeIntensityBoost;
+  const effectiveHaloTrim = Math.max(0, debouncedHaloTrim + edgePresetSettings.trim);
   const stepLabels = ["Camera", "Capture/Crop", "Background", "Refine", "Color", "Export"];
   const tipsByStep: Record<number, string> = {
     1: "Start your camera or upload a photo to begin.",
@@ -261,11 +290,17 @@ export default function ToolApp() {
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
   const warningIds = new Set([...displayWarnings, ...displayLightingWarnings].map((warning) => warning.id));
-  const previewAspect = Math.max(0.2, standard.widthMm / standard.heightMm);
+  const previewAspect =
+    standard.id === "us" ? OUTPUT_ASPECT_RATIO : Math.max(0.2, standard.widthMm / standard.heightMm);
   const previewFrameStyle =
     previewAspect >= 1
-      ? ({ width: "100%", aspectRatio: `${standard.widthMm} / ${standard.heightMm}` } as const)
-      : ({ height: "100%", aspectRatio: `${standard.widthMm} / ${standard.heightMm}` } as const);
+      ? ({ width: "100%", aspectRatio: `${previewAspect}` } as const)
+      : ({ height: "100%", aspectRatio: `${previewAspect}` } as const);
+  const showPassportGuide = standard.id === "us";
+  const guideTopRatio = 0.08;
+  const guideHeadMinBottomRatio = guideTopRatio + HEAD_HEIGHT_MIN_RATIO;
+  const guideHeadMaxBottomRatio = guideTopRatio + HEAD_HEIGHT_MAX_RATIO;
+  const guideEyeLineRatio = 0.4;
   const stepTitle = stepLabels[activeStep - 1] ?? `Step ${activeStep}`;
   const isAppShell = typeof window !== "undefined" && window.location.pathname.startsWith("/app");
   const canWizardNext =
@@ -290,7 +325,31 @@ export default function ToolApp() {
     <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/60">
       <div className="absolute inset-0 border border-white/10" />
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute left-1/2 top-1/2 h-[70%] w-[55%] -translate-x-1/2 -translate-y-1/2 rounded-[45%] border border-dashed border-white/40" />
+        {showPassportGuide ? (
+          <>
+            <div className="absolute inset-3 rounded-2xl border border-dashed border-white/35" />
+            <div className="absolute inset-y-3 left-1/2 -translate-x-1/2 border-l border-dashed border-white/25" />
+            <div
+              className="absolute inset-x-3 border-t border-dashed border-cyan-200/60"
+              style={{ top: `${guideTopRatio * 100}%` }}
+            />
+            <div
+              className="absolute inset-x-3 border-t border-dashed border-emerald-200/55"
+              style={{ top: `${guideHeadMinBottomRatio * 100}%` }}
+            />
+            <div
+              className="absolute inset-x-3 border-t border-dashed border-gold/60"
+              style={{ top: `${guideHeadMaxBottomRatio * 100}%` }}
+            />
+            <div
+              className="absolute inset-x-3 border-t border-dashed border-ocean/70"
+              style={{ top: `${guideEyeLineRatio * 100}%` }}
+            />
+            <div className="absolute inset-y-[8%] left-1/2 w-[56%] -translate-x-1/2 rounded-[36%] border border-white/25" />
+          </>
+        ) : (
+          <div className="absolute left-1/2 top-1/2 h-[70%] w-[55%] -translate-x-1/2 -translate-y-1/2 rounded-[45%] border border-dashed border-white/40" />
+        )}
       </div>
       {inputUrl ? (
         <img src={inputUrl} alt="Uploaded preview" className="aspect-square w-full object-contain" />
@@ -395,6 +454,9 @@ export default function ToolApp() {
           setCapturedFromCamera(false);
           setBatchItems([]);
           setSelectedBatchId(null);
+          // Prevent stale manual framing from previous sessions causing over-zoomed output.
+          setCropOffset({ x: 0, y: 0 });
+          setCropZoom(1);
           setInputUrl(pendingUpload.dataUrl);
           setCurrentStep(2);
         }
@@ -404,7 +466,7 @@ export default function ToolApp() {
         localStorage.removeItem("pps_pending_upload");
       }
     }
-  }, [setStandardId]);
+  }, [setCropOffset, setCropZoom, setStandardId]);
 
   useEffect(() => {
     const sourceUrl = outputUrl ?? livePreviewUrl;
@@ -527,6 +589,7 @@ export default function ToolApp() {
     if (!inputImage) {
       setOutputUrl(null);
       setWarnings([]);
+      setPassportReport(null);
       return;
     }
     const shouldProcess = bundle && modelStatus.ready;
@@ -540,6 +603,7 @@ export default function ToolApp() {
           detail: "Preview is ready. Processing will begin once the models are loaded."
         }
       ]);
+      setPassportReport(null);
       return;
     }
 
@@ -555,7 +619,7 @@ export default function ToolApp() {
         const adjustedBrightness = clamp(debouncedBrightness + retouchAdjust.brightnessDelta, 70, 130);
         const adjustedContrast = clamp(debouncedContrast + retouchAdjust.contrastDelta, 70, 130);
         const adjustedSaturation = clamp(debouncedSaturation + retouchAdjust.saturationDelta, 70, 140);
-        const { warnings: frameWarnings, canvas } = await processImage({
+        const { warnings: frameWarnings, canvas, edgeMetrics, passportRequirements } = await processImage({
           image: inputImage,
           bundle,
           standard,
@@ -564,8 +628,7 @@ export default function ToolApp() {
           refineEdges,
           refineStrength: effectiveRefineStrength,
           edgeIntensity: effectiveEdgeIntensity,
-          edgeTrim: edgePresetSettings.trim,
-          haloTrim: debouncedHaloTrim,
+          haloTrim: effectiveHaloTrim,
           matteTightness: debouncedMatteTightness,
           brightness: adjustedBrightness,
           contrast: adjustedContrast,
@@ -586,6 +649,14 @@ export default function ToolApp() {
         const report = buildQualityReport(frameWarnings, lightingStats, sharpnessScore);
         setQualityScore(report.score);
         setQualityTips(report.tips);
+        if (edgeMetrics) {
+          const score = Math.round(edgeQualityFromMetrics(edgeMetrics));
+          setEdgeQuality({
+            score,
+            label: edgeQualityLabel(score)
+          });
+        }
+        setPassportReport(passportRequirements ?? null);
         const newUrl = await toObjectUrl(canvas, outputUrlRef.current);
         outputUrlRef.current = newUrl;
         setPreviewUrl(newUrl);
@@ -619,8 +690,8 @@ export default function ToolApp() {
     refineEdges,
     effectiveRefineStrength,
     effectiveEdgeIntensity,
+    effectiveHaloTrim,
     edgePreset,
-    debouncedHaloTrim,
     debouncedMatteTightness,
     debouncedBrightness,
     debouncedContrast,
@@ -678,8 +749,7 @@ export default function ToolApp() {
           refineEdges,
           refineStrength: effectiveRefineStrength,
           edgeIntensity: effectiveEdgeIntensity,
-          edgeTrim: edgePresetSettings.trim,
-          haloTrim: debouncedHaloTrim,
+          haloTrim: effectiveHaloTrim,
           matteTightness: debouncedMatteTightness,
           brightness: adjustedBrightness,
           contrast: adjustedContrast,
@@ -703,6 +773,14 @@ export default function ToolApp() {
           drawPreviewCanvas(outputPreviewRef.current, result.canvas);
           setQualityScore(report.score);
           setQualityTips(report.tips);
+          setPassportReport(result.passportRequirements ?? null);
+          if (result.edgeMetrics) {
+            const score = Math.round(edgeQualityFromMetrics(result.edgeMetrics));
+            setEdgeQuality({
+              score,
+              label: edgeQualityLabel(score)
+            });
+          }
           if (autoCapture && cameraActive && !inputUrl) {
             const hasWarning = result.warnings.some((warning) => warning.level === "warning");
             const goodEnough = report.score >= 85 && !hasWarning;
@@ -771,7 +849,7 @@ export default function ToolApp() {
     effectiveRefineStrength,
     effectiveEdgeIntensity,
     edgePreset,
-    debouncedHaloTrim,
+    effectiveHaloTrim,
     debouncedMatteTightness,
     debouncedBrightness,
     debouncedContrast,
@@ -859,6 +937,10 @@ export default function ToolApp() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setCropOffset({ x: 0, y: 0 });
+    setCropZoom(1);
+    setManualAdjust(false);
+    setFramingSavedAt(null);
     setCapturedFromCamera(true);
     setInputUrl(canvas.toDataURL("image/png"));
   };
@@ -874,8 +956,12 @@ export default function ToolApp() {
     processedCanvasRef.current = null;
     setQualityScore(0);
     setQualityTips([]);
+    setEdgeQuality(null);
+    setPassportReport(null);
+    setAutoEdgeParams(null);
     setBatchItems([]);
     setSelectedBatchId(null);
+    autoTuneKeyRef.current = null;
     setCapturedFromCamera(false);
     setLivePreview(true);
     setCurrentStep(1);
@@ -892,8 +978,12 @@ export default function ToolApp() {
     processedCanvasRef.current = null;
     setQualityScore(0);
     setQualityTips([]);
+    setEdgeQuality(null);
+    setPassportReport(null);
+    setAutoEdgeParams(null);
     setBatchItems([]);
     setSelectedBatchId(null);
+    autoTuneKeyRef.current = null;
     setCapturedFromCamera(false);
     setLivePreview(false);
     setCurrentStep(1);
@@ -927,6 +1017,10 @@ export default function ToolApp() {
       });
     Promise.all(files.map(readFile))
       .then((items) => {
+        setCropOffset({ x: 0, y: 0 });
+        setCropZoom(1);
+        setManualAdjust(false);
+        setFramingSavedAt(null);
         setCapturedFromCamera(false);
         if (items.length > 1) {
           setBatchItems(items);
@@ -942,6 +1036,63 @@ export default function ToolApp() {
       .catch(() => setInputError("Upload failed. Try a different file."));
     event.currentTarget.value = "";
   };
+
+  const applyAutoEdgeSettings = (params: EdgeParams) => {
+    setHaloTrim(params.haloTrim);
+    setMatteTightness(params.matteTighten);
+    setFeather(params.feather);
+    setRefineStrength(params.refineStrength);
+    setEdgeIntensity(params.edgeIntensity);
+    setRefineEdges(params.edgeRefineToggle);
+  };
+
+  const runAutoTuneForImage = async (source: ImageBitmap | HTMLImageElement | HTMLCanvasElement, force = false) => {
+    if (!bundle) return;
+    if (!force && autoTuneLoading) return;
+    setAutoTuneLoading(true);
+    try {
+      const prepared = prepareImageForProcessing(source, 900);
+      const threshold = manualThreshold ? maskThreshold : qualityMap[qualityMode].threshold;
+      const segmentation = segmentPerson(bundle, prepared.image);
+      const maskResult = extractSegmentationMask(segmentation, threshold);
+      if (!maskResult?.mask) return;
+      const built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
+      let candidate = built;
+      const stats = maskStats(candidate);
+      if (stats.coverage < 0.1 || stats.coverage > 0.9) {
+        const inverted = invertMask(candidate);
+        const invertedStats = maskStats(inverted);
+        const candidateScore = Math.abs(stats.coverage - 0.5);
+        const invertedScore = Math.abs(invertedStats.coverage - 0.5);
+        if (invertedScore < candidateScore) {
+          candidate = inverted;
+        }
+      }
+      const sourceData = toImageData(prepared.image, prepared.width, prepared.height);
+      const tuned = autoTuneEdgeParams(sourceData, candidate, {
+        confidenceMask: maskResult.confidenceData
+      });
+      applyAutoEdgeSettings(tuned.params);
+      setAutoEdgeParams(tuned.params);
+      const score = Math.round(tuned.edgeQualityScore);
+      setEdgeQuality({
+        score,
+        label: edgeQualityLabel(score)
+      });
+    } catch (error) {
+      console.error("Auto edge tuning failed", error);
+    } finally {
+      setAutoTuneLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!inputImage || !bundle || !inputUrl || !modelStatus.ready) return;
+    const key = `${inputUrl}:${manualThreshold ? maskThreshold.toFixed(3) : "auto"}`;
+    if (autoTuneKeyRef.current === key) return;
+    autoTuneKeyRef.current = key;
+    void runAutoTuneForImage(inputImage, true);
+  }, [inputImage, bundle, inputUrl, modelStatus.ready, manualThreshold, maskThreshold]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!manualAdjust) return;
@@ -1053,6 +1204,29 @@ export default function ToolApp() {
                       <img src={inputUrl} alt="Before" className="h-full w-full object-contain" />
                     </div>
                   )}
+                  {showPassportGuide && (
+                    <div className="pointer-events-none absolute inset-0">
+                      <div className="absolute inset-2 rounded-2xl border border-dashed border-white/35" />
+                      <div className="absolute inset-y-2 left-1/2 -translate-x-1/2 border-l border-dashed border-white/25" />
+                      <div
+                        className="absolute inset-x-2 border-t border-dashed border-cyan-200/60"
+                        style={{ top: `${guideTopRatio * 100}%` }}
+                      />
+                      <div
+                        className="absolute inset-x-2 border-t border-dashed border-emerald-200/55"
+                        style={{ top: `${guideHeadMinBottomRatio * 100}%` }}
+                      />
+                      <div
+                        className="absolute inset-x-2 border-t border-dashed border-gold/60"
+                        style={{ top: `${guideHeadMaxBottomRatio * 100}%` }}
+                      />
+                      <div
+                        className="absolute inset-x-2 border-t border-dashed border-ocean/70"
+                        style={{ top: `${guideEyeLineRatio * 100}%` }}
+                      />
+                      <div className="absolute inset-y-[8%] left-1/2 w-[56%] -translate-x-1/2 rounded-[36%] border border-white/25" />
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-slate-400">Output will appear here.</div>
@@ -1122,8 +1296,7 @@ export default function ToolApp() {
           refineEdges,
           refineStrength: effectiveRefineStrength,
           edgeIntensity: effectiveEdgeIntensity,
-          edgeTrim: edgePresetSettings.trim,
-          haloTrim: debouncedHaloTrim,
+          haloTrim: effectiveHaloTrim,
           matteTightness: debouncedMatteTightness,
           brightness: adjustedBrightness,
           contrast: adjustedContrast,
@@ -1351,6 +1524,10 @@ export default function ToolApp() {
                               type="button"
                               onClick={() => {
                                 setSelectedBatchId(item.id);
+                                setCropOffset({ x: 0, y: 0 });
+                                setCropZoom(1);
+                                setManualAdjust(false);
+                                setFramingSavedAt(null);
                                 setInputUrl(item.url);
                               }}
                               className={cn(
@@ -1758,10 +1935,35 @@ export default function ToolApp() {
               <>
                 <Card>
                   <CardHeader>
-                    <div>
-                      <CardTitle>Smart Background</CardTitle>
-                      <CardDescription>Dial in edge cleanup for hair and shoulders.</CardDescription>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <CardTitle>Smart Background</CardTitle>
+                        <CardDescription>Dial in edge cleanup for hair and shoulders.</CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          if (inputImage) {
+                            void runAutoTuneForImage(inputImage, true);
+                          }
+                        }}
+                        disabled={!inputImage || !bundle || !modelStatus.ready || autoTuneLoading}
+                      >
+                        {autoTuneLoading ? "Auto tuning..." : "Reset to Auto"}
+                      </Button>
                     </div>
+                    {edgeQuality && (
+                      <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+                        <span className="font-semibold text-white">Edge Quality:</span>{" "}
+                        <span>{`${edgeQuality.score}% • ${edgeQuality.label}`}</span>
+                      </div>
+                    )}
+                    {autoEdgeParams && (
+                      <p className="text-xs text-slate-400">
+                        Auto suggestion: trim {autoEdgeParams.haloTrim}, tighten {autoEdgeParams.matteTighten}, feather{" "}
+                        {autoEdgeParams.feather}.
+                      </p>
+                    )}
                     <Badge>Step 4</Badge>
                   </CardHeader>
                   <div className="grid gap-4">
@@ -1782,7 +1984,7 @@ export default function ToolApp() {
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <p className="text-sm font-semibold">Halo trim</p>
-                      <Slider value={[haloTrim]} min={0} max={6} step={1} onValueChange={([val]) => setHaloTrim(val)} />
+                      <Slider value={[haloTrim]} min={0} max={40} step={1} onValueChange={([val]) => setHaloTrim(val)} />
                       <p className="mt-2 text-xs text-slate-400">Shrinks the matte to remove edge glow.</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1808,14 +2010,14 @@ export default function ToolApp() {
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <p className="text-sm font-semibold">Feather</p>
-                        <Slider value={[feather]} min={0} max={30} step={1} onValueChange={([val]) => setFeather(val)} />
+                        <Slider value={[feather]} min={0} max={20} step={1} onValueChange={([val]) => setFeather(val)} />
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <p className="text-sm font-semibold">Refine strength</p>
                         <Slider
                           value={[refineStrength]}
-                          min={1}
-                          max={8}
+                          min={0}
+                          max={100}
                           step={1}
                           onValueChange={([val]) => setRefineStrength(val)}
                         />
@@ -1824,8 +2026,8 @@ export default function ToolApp() {
                         <p className="text-sm font-semibold">Edge intensity</p>
                         <Slider
                           value={[edgeIntensity]}
-                          min={-10}
-                          max={10}
+                          min={0}
+                          max={100}
                           step={1}
                           onValueChange={([val]) => setEdgeIntensity(val)}
                         />
@@ -2135,6 +2337,72 @@ export default function ToolApp() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Key Photo Requirements</CardTitle>
+                  <CardDescription>
+                    AI checks US passport rules by default and highlights what to fix.
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <div className="grid gap-3 text-sm text-slate-300">
+                {passportReport ? (
+                  <>
+                    <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs">
+                      <span>AI compliance score</span>
+                      <span className="font-semibold text-white">{passportReport.score}%</span>
+                    </div>
+                    <div className="grid gap-2">
+                      {passportReport.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "rounded-2xl border px-3 py-2",
+                            item.status === "pass"
+                              ? "border-emerald-300/30 bg-emerald-300/10"
+                              : item.status === "warn"
+                                ? "border-gold/30 bg-gold/10"
+                                : "border-white/10 bg-white/5"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-white">{item.label}</p>
+                            <span
+                              className={cn(
+                                "text-[10px] font-semibold uppercase tracking-wide",
+                                item.status === "pass"
+                                  ? "text-emerald-200"
+                                  : item.status === "warn"
+                                    ? "text-gold"
+                                    : "text-slate-300"
+                              )}
+                            >
+                              {item.status === "manual" ? "Manual" : item.status === "pass" ? "Pass" : "Review"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-300">{item.detail}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs text-slate-300">
+                      Upload or capture a photo to run AI requirement checks automatically.
+                    </p>
+                    <div className="grid gap-1 text-xs text-slate-400">
+                      {defaultRequirementChecklist.map((item) => (
+                        <p key={item}>- {item}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="text-[11px] text-slate-400">
+                  Material and religious-exception checks require manual confirmation before submission.
+                </p>
               </div>
             </Card>
             {showModelStatus && (
@@ -2580,7 +2848,6 @@ const processImage = async ({
   refineEdges,
   refineStrength,
   edgeIntensity,
-  edgeTrim,
   haloTrim,
   matteTightness,
   brightness,
@@ -2603,7 +2870,6 @@ const processImage = async ({
   refineEdges: boolean;
   refineStrength: number;
   edgeIntensity: number;
-  edgeTrim?: number;
   haloTrim?: number;
   matteTightness?: number;
   brightness: number;
@@ -2624,6 +2890,9 @@ const processImage = async ({
   const imageHeight = prepared.height;
   const backgroundWarnings: WarningItem[] = [];
   let refinedMask: ImageData | null = null;
+  let edgeMetrics: EdgeMetrics | undefined;
+  let passportRequirements: PassportRequirementReport | undefined;
+  const sourceImageData = toImageData(workingImage, imageWidth, imageHeight);
   try {
     const threshold = maskThreshold ?? qualityMap[qualityMode].threshold;
     const segmentation = segmentPerson(bundle, workingImage);
@@ -2644,21 +2913,25 @@ const processImage = async ({
             candidate = inverted;
           }
         }
-        const trimmedCandidate = refineEdges && edgeTrim && edgeTrim > 0 ? erodeMask(candidate, edgeTrim) : candidate;
-        const afterRefine = refineMask(trimmedCandidate, feather, refineEdges, refineStrength);
-        const refinedCandidate =
-          edgeIntensity !== 0
-            ? edgeIntensity > 0
-              ? applyEdgeBoost(afterRefine, edgeIntensity)
-              : applyEdgeSoften(afterRefine, Math.abs(edgeIntensity))
-            : afterRefine;
-        const tightened = matteTightness ? tightenMask(refinedCandidate, matteTightness) : refinedCandidate;
-        const haloFixed = haloTrim && haloTrim > 0 ? erodeMask(tightened, haloTrim) : tightened;
-        const refinedStats = maskStats(haloFixed);
+        const refined = refineSegmentationMask({
+          image: sourceImageData,
+          alphaMask: candidate,
+          params: {
+            haloTrim: clamp(haloTrim ?? 0, 0, 40),
+            matteTighten: clamp(matteTightness ?? 0, 0, 100),
+            feather: clamp(feather, 0, 20),
+            refineStrength: clamp(refineStrength, 0, 100),
+            edgeIntensity: clamp(edgeIntensity, 0, 100),
+            edgeRefineToggle: refineEdges
+          },
+          confidenceMask: maskResult.confidenceData
+        });
+        const refinedStats = maskStats(refined.mask);
         if (refinedStats.coverage < 0.05) {
           refinedMask = null;
         } else {
-          refinedMask = haloFixed;
+          refinedMask = refined.mask;
+          edgeMetrics = refined.metricsAfter;
         }
       }
     }
@@ -2674,36 +2947,41 @@ const processImage = async ({
       detail: "Using the original background. Try again after models load."
     });
   }
-
-  const maskCanvas = document.createElement("canvas");
-  maskCanvas.width = refinedMask.width;
-  maskCanvas.height = refinedMask.height;
-  const maskCtx = maskCanvas.getContext("2d");
-  if (!maskCtx) throw new Error("Mask canvas unavailable.");
-  maskCtx.putImageData(refinedMask, 0, 0);
-
-  const personCanvas = document.createElement("canvas");
-  personCanvas.width = imageWidth;
-  personCanvas.height = imageHeight;
-  const personCtx = personCanvas.getContext("2d");
-  if (!personCtx) throw new Error("Canvas unavailable.");
-  personCtx.drawImage(image, 0, 0);
-  personCtx.globalCompositeOperation = "destination-in";
-  personCtx.drawImage(maskCanvas, 0, 0, personCanvas.width, personCanvas.height);
-  personCtx.globalCompositeOperation = "source-over";
+  const normalizedBackground = backgroundColor.trim().toLowerCase();
+  const usBackgroundAllowed =
+    normalizedBackground === "#ffffff" ||
+    normalizedBackground === "#fff" ||
+    normalizedBackground === "white" ||
+    normalizedBackground === "#f8f7f2";
+  const resolvedBackgroundColor =
+    standard.id === "us" && !usBackgroundAllowed ? "#ffffff" : backgroundColor;
+  if (standard.id === "us" && resolvedBackgroundColor !== backgroundColor) {
+    backgroundWarnings.push({
+      id: "bg_us_adjusted",
+      level: "info",
+      title: "Background adjusted for US passport",
+      detail: "US passport output uses plain white/off-white background."
+    });
+  }
+  const correctedSubject = removeEdgeHalo(sourceImageData, refinedMask);
+  let composited =
+    resolvedBackgroundColor.trim().toLowerCase() === "#ffffff" ||
+    resolvedBackgroundColor.trim().toLowerCase() === "white"
+      ? compositeOnWhiteBackground(correctedSubject, refinedMask)
+      : compositeWithBackground(correctedSubject, refinedMask, resolvedBackgroundColor);
+  const isWhiteBg =
+    resolvedBackgroundColor.trim().toLowerCase() === "#ffffff" ||
+    resolvedBackgroundColor.trim().toLowerCase() === "white";
+  if (isWhiteBg) {
+    composited = validateBackgroundWhite(composited, refinedMask, [255, 255, 255]).image;
+  }
 
   const compositeCanvas = document.createElement("canvas");
   compositeCanvas.width = imageWidth;
   compositeCanvas.height = imageHeight;
   const ctx = compositeCanvas.getContext("2d");
   if (!ctx) throw new Error("Canvas unavailable.");
-  if (backgroundColor === "transparent") {
-    ctx.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-  } else {
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-  }
-  ctx.drawImage(personCanvas, 0, 0);
+  ctx.putImageData(composited, 0, 0);
 
   const filteredCanvas = document.createElement("canvas");
   filteredCanvas.width = imageWidth;
@@ -2726,15 +3004,36 @@ const processImage = async ({
   const crop = manualAdjust
     ? applyManualCrop(cropResult.crop, cropOffset, cropZoom, imageWidth, imageHeight)
     : cropResult.crop;
+
+  try {
+    const filteredImageData = filteredCtx.getImageData(0, 0, filteredCanvas.width, filteredCanvas.height);
+    passportRequirements = evaluatePassportRequirements({
+      image: sourceImageData,
+      compositedImage: filteredImageData,
+      mask: refinedMask,
+      standard,
+      crop,
+      landmarks: landmarks ?? null,
+      brightness,
+      contrast,
+      saturation,
+      hue
+    });
+  } catch (error) {
+    console.error("Passport requirement check failed", error);
+  }
+
   const output = cropCanvas(filteredCanvas, crop);
   return {
     canvas: output,
     warnings: [...backgroundWarnings, ...cropResult.warnings],
+    edgeMetrics,
+    passportRequirements,
     guide: {
       crop: cropResult.crop,
       imageWidth,
       imageHeight,
-      eyeLineRatio: standard.eyeLineRatio
+      eyeLineRatio: standard.id === "us" ? 0.4 : standard.eyeLineRatio
     }
   };
 };
@@ -2853,6 +3152,27 @@ const loadImageFromUrl = (url: string) =>
     img.src = url;
   });
 
+const toImageData = (
+  image: ImageBitmap | HTMLImageElement | HTMLCanvasElement,
+  width: number,
+  height: number
+) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable.");
+  ctx.drawImage(image, 0, 0, width, height);
+  return ctx.getImageData(0, 0, width, height);
+};
+
+const edgeQualityLabel = (score: number) => {
+  if (score >= 85) return "Studio clean";
+  if (score >= 70) return "Good";
+  if (score >= 55) return "Needs tune";
+  return "Needs cleanup";
+};
+
 const prepareImageForProcessing = (
   image: ImageBitmap | HTMLImageElement | HTMLCanvasElement,
   maxSize?: number
@@ -2897,7 +3217,7 @@ const maskStats = (mask: ImageData) => {
 
 const extractMask = (mask: unknown, threshold: number) => {
   if (!mask) return null;
-  if (mask instanceof ImageData) return { mask, isAlpha: false };
+  if (mask instanceof ImageData) return { mask, isAlpha: false, confidenceData: undefined as Float32Array | undefined };
   if (typeof mask === "object") {
     const typed = mask as {
       width?: number;
@@ -2906,14 +3226,15 @@ const extractMask = (mask: unknown, threshold: number) => {
       getAsUint8Array?: () => Uint8Array;
       getAsFloat32Array?: () => Float32Array;
     };
-    if (typed.getAsImageData) return { mask: typed.getAsImageData(), isAlpha: false };
+    if (typed.getAsImageData) return { mask: typed.getAsImageData(), isAlpha: false, confidenceData: undefined as Float32Array | undefined };
     if (typed.getAsUint8Array && typed.width && typed.height) {
       const mask = maskFromArray(typed.getAsUint8Array(), typed.width, typed.height, 255);
-      return mask ? { mask, isAlpha: true } : null;
+      return mask ? { mask, isAlpha: true, confidenceData: undefined as Float32Array | undefined } : null;
     }
     if (typed.getAsFloat32Array && typed.width && typed.height) {
-      const mask = maskFromConfidenceArray(typed.getAsFloat32Array(), typed.width, typed.height, threshold);
-      return mask ? { mask, isAlpha: true } : null;
+      const confidenceData = typed.getAsFloat32Array();
+      const mask = maskFromConfidenceArray(confidenceData, typed.width, typed.height, threshold);
+      return mask ? { mask, isAlpha: true, confidenceData } : null;
     }
   }
   return null;
@@ -2938,12 +3259,13 @@ const extractSegmentationMask = (segmentation: unknown, threshold: number) => {
       getAsUint8Array?: () => Uint8Array;
     };
     if (typed.getAsFloat32Array && typed.width && typed.height) {
-      const mask = maskFromConfidenceArray(typed.getAsFloat32Array(), typed.width, typed.height, threshold);
-      return mask ? { mask, isAlpha: true } : null;
+      const confidenceData = typed.getAsFloat32Array();
+      const mask = maskFromConfidenceArray(confidenceData, typed.width, typed.height, threshold);
+      return mask ? { mask, isAlpha: true, confidenceData } : null;
     }
     if (typed.getAsUint8Array && typed.width && typed.height) {
       const mask = maskFromArray(typed.getAsUint8Array(), typed.width, typed.height, 255);
-      return mask ? { mask, isAlpha: true } : null;
+      return mask ? { mask, isAlpha: true, confidenceData: undefined as Float32Array | undefined } : null;
     }
   }
   return null;
@@ -2966,8 +3288,10 @@ const maskFromArray = (data: Float32Array | Uint8Array, width: number, height: n
 const maskFromConfidenceArray = (data: Float32Array, width: number, height: number, threshold: number) => {
   if (data.length < width * height) return null;
   const mask = new ImageData(width, height);
+  const lower = Math.max(0, threshold - 0.08);
+  const upper = Math.min(1, threshold + 0.28);
   for (let i = 0; i < width * height; i += 1) {
-    const normalized = Math.max(0, data[i] - threshold) / (1 - threshold);
+    const normalized = smoothstep(lower, upper, data[i]);
     const alpha = clamp(Math.round(normalized * 255), 0, 255);
     mask.data[i * 4] = 255;
     mask.data[i * 4 + 1] = 255;
@@ -2975,6 +3299,11 @@ const maskFromConfidenceArray = (data: Float32Array, width: number, height: numb
     mask.data[i * 4 + 3] = alpha;
   }
   return mask;
+};
+
+const smoothstep = (edge0: number, edge1: number, x: number) => {
+  const t = clamp((x - edge0) / Math.max(1e-6, edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
 };
 
 const invertMask = (mask: ImageData) => {
@@ -2988,84 +3317,6 @@ const invertMask = (mask: ImageData) => {
   }
   return out;
 };
-
-const applyEdgeBoost = (mask: ImageData, intensity: number) => {
-  const out = new ImageData(mask.width, mask.height);
-  const radius = Math.max(1, Math.round(intensity));
-  for (let y = 0; y < mask.height; y += 1) {
-    for (let x = 0; x < mask.width; x += 1) {
-      const idx = (y * mask.width + x) * 4 + 3;
-      const base = mask.data[idx];
-      let edge = 0;
-      const neighbors = [
-        x > 0 ? mask.data[idx - 4] : base,
-        x < mask.width - 1 ? mask.data[idx + 4] : base,
-        y > 0 ? mask.data[idx - mask.width * 4] : base,
-        y < mask.height - 1 ? mask.data[idx + mask.width * 4] : base
-      ];
-      for (const n of neighbors) {
-        edge = Math.max(edge, Math.abs(base - n));
-      }
-      const boosted = clamp(base + edge * radius, 0, 255);
-      out.data[idx - 3] = 255;
-      out.data[idx - 2] = 255;
-      out.data[idx - 1] = 255;
-      out.data[idx] = boosted;
-    }
-  }
-  return out;
-};
-
-const applyEdgeSoften = (mask: ImageData, intensity: number) => {
-  const radius = Math.max(1, Math.round(intensity));
-  return refineMask(mask, radius, false, 1);
-};
-
-const tightenMask = (mask: ImageData, tightness: number) => {
-  const factor = clamp(tightness, 0, 100) / 100;
-  if (factor <= 0) return mask;
-  const gamma = 1 + factor * 1.6;
-  const out = new ImageData(mask.width, mask.height);
-  const total = mask.width * mask.height;
-  for (let i = 0; i < total; i += 1) {
-    const idx = i * 4 + 3;
-    const alpha = mask.data[idx] / 255;
-    const adjusted = clamp(Math.round(Math.pow(alpha, gamma) * 255), 0, 255);
-    out.data[idx - 3] = 255;
-    out.data[idx - 2] = 255;
-    out.data[idx - 1] = 255;
-    out.data[idx] = adjusted;
-  }
-  return out;
-};
-
-const erodeMask = (mask: ImageData, radius = 1) => {
-  const { width, height, data } = mask;
-  const out = new Uint8ClampedArray(data.length);
-  const r = Math.max(1, Math.round(radius));
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      let min = 255;
-      for (let ky = -r; ky <= r; ky += 1) {
-        const ny = y + ky;
-        if (ny < 0 || ny >= height) continue;
-        for (let kx = -r; kx <= r; kx += 1) {
-          const nx = x + kx;
-          if (nx < 0 || nx >= width) continue;
-          const idx = (ny * width + nx) * 4 + 3;
-          min = Math.min(min, data[idx]);
-        }
-      }
-      const idx = (y * width + x) * 4 + 3;
-      out[idx - 3] = 255;
-      out[idx - 2] = 255;
-      out[idx - 1] = 255;
-      out[idx] = min;
-    }
-  }
-  return new ImageData(out, width, height);
-};
-
 
 const createFullMask = (width: number, height: number) => {
   const mask = new ImageData(width, height);

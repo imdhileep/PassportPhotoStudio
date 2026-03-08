@@ -1,0 +1,18 @@
+{
+  "name": "busy-background",
+  "width": 220,
+  "height": 260,
+  "background": {
+    "type": "busy",
+    "colorA": [228, 226, 218],
+    "colorB": [198, 208, 224]
+  },
+  "subject": {
+    "skin": [196, 158, 134],
+    "hair": [44, 38, 30],
+    "shirt": [84, 116, 150]
+  },
+  "noise": 0.028,
+  "halo": 0.27,
+  "spill": 0.24
+}

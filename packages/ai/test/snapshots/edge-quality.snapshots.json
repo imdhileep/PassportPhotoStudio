@@ -1,0 +1,131 @@
+{
+  "dark-hair": {
+    "params": {
+      "haloTrim": 12,
+      "matteTighten": 20,
+      "feather": 7,
+      "refineStrength": 93,
+      "edgeIntensity": 46,
+      "edgeRefineToggle": true
+    },
+    "before": {
+      "haloScore": 0.8281,
+      "spillScore": 0.0009,
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 1,
+      "contrastScore": 1,
+      "maskConfidence": 0.9967
+    },
+    "baseline": {
+      "haloScore": 0.8949,
+      "spillScore": 0,
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 1,
+      "contrastScore": 1,
+      "maskConfidence": 0.8225
+    },
+    "afterMask": {
+      "haloScore": 0.8273,
+      "spillScore": 0.0018,
+      "jaggyScore": 0.7065,
+      "hairEdgeDensity": 1,
+      "contrastScore": 1,
+      "maskConfidence": 0.956
+    },
+    "afterDespill": {
+      "haloScore": 0.9356,
+      "spillScore": 0,
+      "jaggyScore": 0.7065,
+      "hairEdgeDensity": 1,
+      "contrastScore": 1,
+      "maskConfidence": 0.956
+    },
+    "edgeQualityScore": 77.614
+  },
+  "light-hair": {
+    "params": {
+      "haloTrim": 9,
+      "matteTighten": 14,
+      "feather": 9,
+      "refineStrength": 93,
+      "edgeIntensity": 52,
+      "edgeRefineToggle": true
+    },
+    "before": {
+      "haloScore": 0.5664,
+      "spillScore": 0,
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 1,
+      "contrastScore": 0.7969,
+      "maskConfidence": 0.9751
+    },
+    "baseline": {
+      "haloScore": 0.5877,
+      "spillScore": 0,
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 1,
+      "contrastScore": 0.8692,
+      "maskConfidence": 0.8022
+    },
+    "afterMask": {
+      "haloScore": 0.566,
+      "spillScore": 0.0006,
+      "jaggyScore": 0.7064,
+      "hairEdgeDensity": 1,
+      "contrastScore": 0.7959,
+      "maskConfidence": 0.9888
+    },
+    "afterDespill": {
+      "haloScore": 0.5853,
+      "spillScore": 0,
+      "jaggyScore": 0.7064,
+      "hairEdgeDensity": 0.989,
+      "contrastScore": 0.7994,
+      "maskConfidence": 0.9888
+    },
+    "edgeQualityScore": 85.855
+  },
+  "busy-background": {
+    "params": {
+      "haloTrim": 10,
+      "matteTighten": 16,
+      "feather": 9,
+      "refineStrength": 86,
+      "edgeIntensity": 48,
+      "edgeRefineToggle": true
+    },
+    "before": {
+      "haloScore": 0.5938,
+      "spillScore": 0.0229,
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 0.8247,
+      "contrastScore": 0.781,
+      "maskConfidence": 0.9807
+    },
+    "baseline": {
+      "haloScore": 0.6244,
+      "spillScore": 0.0066,
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 0.9507,
+      "contrastScore": 1,
+      "maskConfidence": 0.8403
+    },
+    "afterMask": {
+      "haloScore": 0.5932,
+      "spillScore": 0.0238,
+      "jaggyScore": 0.7073,
+      "hairEdgeDensity": 0.8247,
+      "contrastScore": 0.7848,
+      "maskConfidence": 0.9345
+    },
+    "afterDespill": {
+      "haloScore": 0.7494,
+      "spillScore": 0,
+      "jaggyScore": 0.7073,
+      "hairEdgeDensity": 0.8795,
+      "contrastScore": 0.8676,
+      "maskConfidence": 0.9345
+    },
+    "edgeQualityScore": 83.781
+  }
+}
