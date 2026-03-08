@@ -11,6 +11,7 @@ import { Section } from "@/components/marketing/Section";
 import { Card } from "@/components/ui";
 import Examples from "@/components/marketing/Examples";
 import { appConfig } from "@/config";
+import { savePendingUpload } from "@/lib/pendingUpload";
 
 export default function Landing() {
   const handleGenerate = async (settings: {
@@ -29,13 +30,25 @@ export default function Landing() {
     params.set("doc", settings.docType);
     params.set("output", settings.output);
     if (settings.fileDataUrl) {
-      localStorage.setItem(
-        "pps_pending_upload",
-        JSON.stringify({
-          dataUrl: settings.fileDataUrl,
-          name: settings.fileName ?? "upload-image"
-        })
-      );
+      try {
+        const pending = await savePendingUpload(settings.fileDataUrl, settings.fileName);
+        localStorage.setItem(
+          "pps_pending_upload",
+          JSON.stringify({
+            id: pending.id,
+            name: pending.name
+          })
+        );
+      } catch (error) {
+        console.warn("IndexedDB pending upload unavailable, falling back to data URL", error);
+        localStorage.setItem(
+          "pps_pending_upload",
+          JSON.stringify({
+            dataUrl: settings.fileDataUrl,
+            name: settings.fileName ?? "upload-image"
+          })
+        );
+      }
     }
     if (settings.templateId) {
       params.set("templateId", settings.templateId);

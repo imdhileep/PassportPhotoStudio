@@ -2,6 +2,7 @@
 import { motion } from "framer-motion";
 import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, Slider, Switch } from "@/components/ui";
 import { appConfig } from "@/config";
+import { loadPendingUpload } from "@/lib/pendingUpload";
 import { cn } from "@/lib/utils";
 import { useLocalStorage } from "@/features/useLocalStorage";
 import { Stepper } from "@/components/Stepper";
@@ -229,6 +230,7 @@ export default function ToolApp() {
   const cropDragFrameRef = useRef<number | null>(null);
   const cropDragPendingRef = useRef<{ x: number; y: number } | null>(null);
   const autoTuneKeyRef = useRef<string | null>(null);
+  const pendingObjectUrlRef = useRef<string | null>(null);
 
   const standard = useMemo(() => {
     if (standardId !== "custom") return getStandardById(standardId);
@@ -418,6 +420,9 @@ export default function ToolApp() {
       if (outputUrlRef.current) {
         URL.revokeObjectURL(outputUrlRef.current);
       }
+      if (pendingObjectUrlRef.current) {
+        URL.revokeObjectURL(pendingObjectUrlRef.current);
+      }
     };
   }, []);
 
@@ -453,23 +458,47 @@ export default function ToolApp() {
     }
     const pendingUploadRaw = localStorage.getItem("pps_pending_upload");
     if (pendingUploadRaw) {
-      try {
-        const pendingUpload = JSON.parse(pendingUploadRaw) as { dataUrl?: string };
-        if (pendingUpload.dataUrl) {
-          setCapturedFromCamera(false);
-          setBatchItems([]);
-          setSelectedBatchId(null);
-          // Prevent stale manual framing from previous sessions causing over-zoomed output.
-          setCropOffset({ x: 0, y: 0 });
-          setCropZoom(1);
-          setInputUrl(pendingUpload.dataUrl);
-          setCurrentStep(2);
+      let cancelled = false;
+      const applyPending = async () => {
+        try {
+          const pendingUpload = JSON.parse(pendingUploadRaw) as { id?: string; dataUrl?: string };
+          if (pendingUpload.id) {
+            const loaded = await loadPendingUpload(pendingUpload.id);
+            if (!loaded || cancelled) return;
+            if (pendingObjectUrlRef.current) {
+              URL.revokeObjectURL(pendingObjectUrlRef.current);
+            }
+            pendingObjectUrlRef.current = loaded.objectUrl;
+            setCapturedFromCamera(false);
+            setBatchItems([]);
+            setSelectedBatchId(null);
+            // Prevent stale manual framing from previous sessions causing over-zoomed output.
+            setCropOffset({ x: 0, y: 0 });
+            setCropZoom(1);
+            setInputUrl(loaded.objectUrl);
+            setCurrentStep(2);
+            return;
+          }
+          if (pendingUpload.dataUrl && !cancelled) {
+            setCapturedFromCamera(false);
+            setBatchItems([]);
+            setSelectedBatchId(null);
+            // Prevent stale manual framing from previous sessions causing over-zoomed output.
+            setCropOffset({ x: 0, y: 0 });
+            setCropZoom(1);
+            setInputUrl(pendingUpload.dataUrl);
+            setCurrentStep(2);
+          }
+        } catch (error) {
+          console.warn("Pending upload payload is invalid.", error);
+        } finally {
+          localStorage.removeItem("pps_pending_upload");
         }
-      } catch (error) {
-        console.warn("Pending upload payload is invalid.", error);
-      } finally {
-        localStorage.removeItem("pps_pending_upload");
-      }
+      };
+      void applyPending();
+      return () => {
+        cancelled = true;
+      };
     }
   }, [setCropOffset, setCropZoom, setStandardId]);
 
@@ -542,7 +571,8 @@ export default function ToolApp() {
         const config = {
           wasmBasePath: appConfig.wasmBasePath,
           faceModelPath: `${appConfig.modelBasePath}/face_landmarker.task`,
-          segmenterModelPath: `${appConfig.modelBasePath}/selfie_segmenter.tflite`
+          segmenterModelPath: `${appConfig.modelBasePath}/selfie_segmenter.tflite`,
+          preferGpu: false
         };
         const bundleLoaded = await loadVisionTasks(config);
         setBundle(bundleLoaded);

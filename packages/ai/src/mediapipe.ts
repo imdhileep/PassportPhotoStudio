@@ -18,6 +18,7 @@ export type VisionTaskConfig = {
   faceModelPath: string;
   segmenterModelPath: string;
   numFaces?: number;
+  preferGpu?: boolean;
 };
 
 export const loadVisionTasks = async (config: VisionTaskConfig): Promise<VisionTaskBundle> => {
@@ -43,11 +44,20 @@ export const loadVisionTasks = async (config: VisionTaskConfig): Promise<VisionT
     return { faceLandmarker, imageSegmenter, delegate };
   };
 
+  const preferGpu = config.preferGpu ?? false;
+  if (preferGpu) {
+    try {
+      return await create("GPU");
+    } catch (error) {
+      console.warn("GPU delegate unavailable, falling back to CPU", error);
+      return await create("CPU");
+    }
+  }
   try {
-    return await create("GPU");
-  } catch (error) {
-    console.warn("GPU delegate unavailable, falling back to CPU", error);
     return await create("CPU");
+  } catch (error) {
+    console.warn("CPU delegate init failed, retrying GPU", error);
+    return await create("GPU");
   }
 };
 
