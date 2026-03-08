@@ -1042,12 +1042,18 @@ export const compositeWithBackground = (
   const transparent = backgroundColor === "transparent";
   const strictBg = !transparent;
   const isNearWhiteBg = bg[0] >= 245 && bg[1] >= 245 && bg[2] >= 245;
+  const rawAlpha = alphaArray(mask);
+  const aaAlpha = isNearWhiteBg ? boxBlurAlpha(rawAlpha, width, height, 1) : rawAlpha;
   // For white backgrounds, keep a broader soft transition to avoid gray/brown fringes.
   const bgHardCut = isNearWhiteBg ? 0.02 : 0.015;
   const bgSoftCut = isNearWhiteBg ? 0.46 : 0.22;
   for (let i = 0; i < width * height; i += 1) {
     const idx = i * 4;
-    const alpha = clamp(mask.data[idx + 3] / 255);
+    const alphaRaw = rawAlpha[i];
+    const alpha =
+      isNearWhiteBg && alphaRaw > 0.01 && alphaRaw < 0.99
+        ? clamp(alphaRaw * 0.35 + aaAlpha[i] * 0.65)
+        : clamp(alphaRaw);
     if (transparent) {
       out[idx] = data[idx];
       out[idx + 1] = data[idx + 1];
@@ -1064,7 +1070,7 @@ export const compositeWithBackground = (
     }
     let edgeAlpha = strictBg ? smoothstep(bgHardCut, bgSoftCut, alpha) : alpha;
     if (isNearWhiteBg) {
-      edgeAlpha = Math.pow(edgeAlpha, 1.35);
+      edgeAlpha = Math.pow(edgeAlpha, 1.1);
       if (alpha < 0.1) edgeAlpha = 0;
     }
     out[idx] = clampByte(data[idx] * edgeAlpha + bg[0] * (1 - edgeAlpha));
