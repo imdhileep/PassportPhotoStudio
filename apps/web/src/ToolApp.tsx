@@ -103,6 +103,11 @@ const buildStamp = import.meta.env.VITE_BUILD_STAMP || "dev";
 
 const initialDrag: DragState = { active: false, startX: 0, startY: 0, originX: 0, originY: 0 };
 
+// Keep UI responsive by capping heavy CV passes during interactive preview.
+// Final export dimensions are still generated from the processed canvas at passport DPI.
+const INTERACTIVE_MAX_SIZE = 1400;
+const AUTO_TUNE_MAX_SIZE = 900;
+
 const warningCard = (warning: WarningItem) => (
   <div key={warning.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
     <p className="text-sm font-semibold text-white">{warning.title}</p>
@@ -639,6 +644,7 @@ export default function ToolApp() {
           cropOffset: debouncedCropOffset,
           cropZoom: debouncedCropZoom,
           qualityMode,
+          maxSize: INTERACTIVE_MAX_SIZE,
           maskThreshold: manualThreshold ? maskThreshold : undefined
         });
         if (cancelled) return;
@@ -1051,9 +1057,9 @@ export default function ToolApp() {
     if (!force && autoTuneLoading) return;
     setAutoTuneLoading(true);
     try {
-      const prepared = prepareImageForProcessing(source, 900);
+      const preparedForTune = prepareImageForProcessing(source, AUTO_TUNE_MAX_SIZE);
       const threshold = manualThreshold ? maskThreshold : qualityMap[qualityMode].threshold;
-      const segmentation = segmentPerson(bundle, prepared.image);
+      const segmentation = segmentPerson(bundle, preparedForTune.image);
       const maskResult = extractSegmentationMask(segmentation, threshold);
       if (!maskResult?.mask) return;
       const built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
@@ -1068,7 +1074,7 @@ export default function ToolApp() {
           candidate = inverted;
         }
       }
-      const sourceData = toImageData(prepared.image, prepared.width, prepared.height);
+      const sourceData = toImageData(preparedForTune.image, preparedForTune.width, preparedForTune.height);
       const tuned = autoTuneEdgeParams(sourceData, candidate, {
         confidenceMask: maskResult.confidenceData
       });
