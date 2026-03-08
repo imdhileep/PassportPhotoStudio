@@ -25,20 +25,20 @@
       "maskConfidence": 0.8225
     },
     "afterMask": {
-      "haloScore": 0.8272,
-      "spillScore": 0.0027,
-      "jaggyScore": 0.7077,
+      "haloScore": 0.8281,
+      "spillScore": 0.0009,
+      "jaggyScore": 0.7055,
       "hairEdgeDensity": 1,
       "contrastScore": 1,
-      "maskConfidence": 0.7578
+      "maskConfidence": 0.9307
     },
     "afterDespill": {
-      "haloScore": 0.9296,
+      "haloScore": 0.9257,
       "spillScore": 0,
-      "jaggyScore": 0.7077,
-      "hairEdgeDensity": 0.9723,
-      "contrastScore": 0.948,
-      "maskConfidence": 0.7578
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 1,
+      "contrastScore": 1,
+      "maskConfidence": 0.9307
     },
     "edgeQualityScore": 77.614
   },
@@ -68,20 +68,20 @@
       "maskConfidence": 0.8022
     },
     "afterMask": {
-      "haloScore": 0.5656,
-      "spillScore": 0.0014,
-      "jaggyScore": 0.7076,
+      "haloScore": 0.5664,
+      "spillScore": 0,
+      "jaggyScore": 0.7055,
       "hairEdgeDensity": 1,
-      "contrastScore": 0.7925,
-      "maskConfidence": 0.8332
+      "contrastScore": 0.7969,
+      "maskConfidence": 0.9266
     },
     "afterDespill": {
-      "haloScore": 0.5776,
+      "haloScore": 0.5837,
       "spillScore": 0,
-      "jaggyScore": 0.7076,
-      "hairEdgeDensity": 0.8767,
-      "contrastScore": 0.7196,
-      "maskConfidence": 0.8332
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 1,
+      "contrastScore": 0.8782,
+      "maskConfidence": 0.9266
     },
     "edgeQualityScore": 85.855
   },
@@ -111,20 +111,20 @@
       "maskConfidence": 0.8403
     },
     "afterMask": {
-      "haloScore": 0.5941,
-      "spillScore": 0.0248,
-      "jaggyScore": 0.7074,
-      "hairEdgeDensity": 0.8338,
-      "contrastScore": 0.7856,
-      "maskConfidence": 0.7147
+      "haloScore": 0.5938,
+      "spillScore": 0.0229,
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 0.8247,
+      "contrastScore": 0.781,
+      "maskConfidence": 0.9318
     },
     "afterDespill": {
-      "haloScore": 0.7448,
+      "haloScore": 0.7143,
       "spillScore": 0,
-      "jaggyScore": 0.7074,
-      "hairEdgeDensity": 0.9446,
-      "contrastScore": 0.7126,
-      "maskConfidence": 0.7147
+      "jaggyScore": 0.7055,
+      "hairEdgeDensity": 1,
+      "contrastScore": 1,
+      "maskConfidence": 0.9318
     },
     "edgeQualityScore": 83.781
   }

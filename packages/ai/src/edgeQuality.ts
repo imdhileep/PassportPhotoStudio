@@ -857,6 +857,76 @@ const antialiasBoundaryAlpha = (
   return out;
 };
 
+const SQRT2 = Math.SQRT2;
+
+const chamferDistanceToValue = (binary: Uint8Array, width: number, height: number, target: 0 | 1) => {
+  const inf = 1e9;
+  const dist = new Float32Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    dist[i] = binary[i] === target ? 0 : inf;
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i = y * width + x;
+      let d = dist[i];
+      if (x > 0) d = Math.min(d, dist[i - 1] + 1);
+      if (y > 0) d = Math.min(d, dist[i - width] + 1);
+      if (x > 0 && y > 0) d = Math.min(d, dist[i - width - 1] + SQRT2);
+      if (x < width - 1 && y > 0) d = Math.min(d, dist[i - width + 1] + SQRT2);
+      dist[i] = d;
+    }
+  }
+
+  for (let y = height - 1; y >= 0; y -= 1) {
+    for (let x = width - 1; x >= 0; x -= 1) {
+      const i = y * width + x;
+      let d = dist[i];
+      if (x < width - 1) d = Math.min(d, dist[i + 1] + 1);
+      if (y < height - 1) d = Math.min(d, dist[i + width] + 1);
+      if (x < width - 1 && y < height - 1) d = Math.min(d, dist[i + width + 1] + SQRT2);
+      if (x > 0 && y < height - 1) d = Math.min(d, dist[i + width - 1] + SQRT2);
+      dist[i] = d;
+    }
+  }
+
+  return dist;
+};
+
+const signedDistanceAntialias = (
+  alpha: Float32Array,
+  image: ImageData,
+  binary: Uint8Array,
+  radius = 1.6
+) => {
+  const { width, height } = image;
+  const distToOutside = chamferDistanceToValue(binary, width, height, 0);
+  const distToInside = chamferDistanceToValue(binary, width, height, 1);
+  const gradient = sobelMagnitude(image);
+  const subjectBox = estimateBoundingBox(binary, width, height);
+  const subjectHeight = Math.max(1, subjectBox.maxY - subjectBox.minY + 1);
+  const shoulderStartY = subjectBox.minY + subjectHeight * 0.34;
+  const torsoStartY = subjectBox.minY + subjectHeight * 0.46;
+  const out = alpha.slice();
+
+  const activeBand = radius * 2.8;
+  for (let i = 0; i < out.length; i += 1) {
+    const signed = distToOutside[i] - distToInside[i];
+    if (Math.abs(signed) > activeBand) continue;
+    const y = Math.floor(i / width);
+    const inTorso = y >= torsoStartY;
+    const localRadius = inTorso ? radius * 1.25 : y >= shoulderStartY ? radius * 1.1 : radius;
+    const aa = smoothstep(-localRadius, localRadius, signed);
+    const detailLock = gradient[i] * (inTorso ? 0.56 : 1);
+    const centerBoost = Math.abs(signed) <= localRadius ? 0.25 : 0;
+    const torsoBoost = inTorso ? 0.2 : 0;
+    const blend = clamp((1 - detailLock) * (0.86 + torsoBoost) + centerBoost + torsoBoost * 0.35);
+    out[i] = out[i] * (1 - blend) + aa * blend;
+  }
+
+  return out;
+};
+
 export const refinePassportMatte = (input: {
   image: ImageData;
   alphaMask: ImageData;
@@ -914,6 +984,7 @@ export const refinePassportMatte = (input: {
     alpha = guidedRefine(alpha, image, binary, params.refineStrength);
     alpha = adaptiveFeather(alpha, image, binary, params.feather, metricsBefore);
     alpha = antialiasBoundaryAlpha(alpha, image, binary, 1);
+    alpha = signedDistanceAntialias(alpha, image, binary, 1.6);
   }
 
   const edgeBoostNorm = clamp(params.edgeIntensity / 100);
@@ -1049,16 +1120,30 @@ export const compositeWithBackground = (
   const strictBg = !transparent;
   const isNearWhiteBg = bg[0] >= 245 && bg[1] >= 245 && bg[2] >= 245;
   const rawAlpha = alphaArray(mask);
-  const aaAlpha = isNearWhiteBg ? boxBlurAlpha(rawAlpha, width, height, 1) : rawAlpha;
+  const aaAlphaFine = isNearWhiteBg ? boxBlurAlpha(rawAlpha, width, height, 1) : rawAlpha;
+  const aaAlphaSoft = isNearWhiteBg ? boxBlurAlpha(rawAlpha, width, height, 2) : rawAlpha;
+  const binary = new Uint8Array(rawAlpha.length);
+  for (let i = 0; i < rawAlpha.length; i += 1) {
+    binary[i] = rawAlpha[i] >= 0.5 ? 1 : 0;
+  }
+  const subjectBox = estimateBoundingBox(binary, width, height);
+  const subjectHeight = Math.max(1, subjectBox.maxY - subjectBox.minY + 1);
+  const torsoStartY = subjectBox.minY + subjectHeight * 0.46;
   // For white backgrounds, keep a broader soft transition to avoid gray/brown fringes.
-  const bgHardCut = isNearWhiteBg ? 0.02 : 0.015;
-  const bgSoftCut = isNearWhiteBg ? 0.46 : 0.22;
+  const bgHardCut = isNearWhiteBg ? 0.018 : 0.015;
+  const bgSoftCut = isNearWhiteBg ? 0.42 : 0.22;
   for (let i = 0; i < width * height; i += 1) {
     const idx = i * 4;
     const alphaRaw = rawAlpha[i];
+    const y = Math.floor(i / width);
+    const inTorso = y >= torsoStartY;
     const alpha =
       isNearWhiteBg && alphaRaw > 0.01 && alphaRaw < 0.99
-        ? clamp(alphaRaw * 0.35 + aaAlpha[i] * 0.65)
+        ? clamp(
+            alphaRaw * (inTorso ? 0.16 : 0.32) +
+              aaAlphaFine[i] * (inTorso ? 0.56 : 0.5) +
+              aaAlphaSoft[i] * (inTorso ? 0.28 : 0.18)
+          )
         : clamp(alphaRaw);
     if (transparent) {
       out[idx] = data[idx];
@@ -1076,8 +1161,8 @@ export const compositeWithBackground = (
     }
     let edgeAlpha = strictBg ? smoothstep(bgHardCut, bgSoftCut, alpha) : alpha;
     if (isNearWhiteBg) {
-      edgeAlpha = Math.pow(edgeAlpha, 1.1);
-      if (alpha < 0.1) edgeAlpha = 0;
+      edgeAlpha = Math.pow(edgeAlpha, inTorso ? 1.28 : 1.08);
+      if (alpha < 0.12) edgeAlpha = 0;
     }
     out[idx] = clampByte(data[idx] * edgeAlpha + bg[0] * (1 - edgeAlpha));
     out[idx + 1] = clampByte(data[idx + 1] * edgeAlpha + bg[1] * (1 - edgeAlpha));
