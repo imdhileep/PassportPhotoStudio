@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export const Badge = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
   <span
     className={cn(
-      "inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/80",
+      "inline-flex items-center rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-widest text-indigo-300",
       className
     )}
     {...props}
