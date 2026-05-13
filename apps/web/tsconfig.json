@@ -13,7 +13,8 @@
     "paths": {
       "@passport/ai": ["../../packages/ai/src"],
       "@/*": ["src/*"]
-    }
+    },
+    "types": ["vite/client"]
   },
   "include": ["src"]
 }

@@ -17,7 +17,7 @@ export type WarningItem = {
 };
 
 export type PassportStandard = {
-  id: "us" | "india" | "custom";
+  id: "us" | "india" | "uk" | "eu" | "canada" | "australia" | "custom";
   label: string;
   widthMm: number;
   heightMm: number;

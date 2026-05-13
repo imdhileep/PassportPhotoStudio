@@ -2,8 +2,8 @@ const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, v
 
 const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
 
-const createImageData = (width: number, height: number, data?: Uint8ClampedArray): ImageData => {
-  const buffer = data ?? new Uint8ClampedArray(width * height * 4);
+const createImageData = (width: number, height: number, data?: Uint8ClampedArray<ArrayBuffer>): ImageData => {
+  const buffer: Uint8ClampedArray<ArrayBuffer> = data ?? new Uint8ClampedArray(width * height * 4);
   if (typeof ImageData !== "undefined") {
     return new ImageData(buffer, width, height);
   }
@@ -959,7 +959,7 @@ export const refinePassportMatte = (input: {
   }
   const structuralSupport = dilateBinary(smoothedStructural, width, height, 1);
 
-  let alpha = baseAlpha.slice();
+  let alpha: Float32Array = baseAlpha.slice();
   for (let i = 0; i < alpha.length; i += 1) {
     if (!structuralSupport[i]) {
       alpha[i] = 0;
