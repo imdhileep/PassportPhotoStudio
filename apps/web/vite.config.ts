@@ -29,6 +29,9 @@ export default defineConfig({
             if (id.includes("@radix-ui")) {
               return "ui-vendor";
             }
+            if (id.includes("@huggingface/transformers")) {
+              return "hf-transformers";
+            }
           }
           if (id.includes("packages/ai") || id.includes("src/ToolApp.tsx")) {
             return "tooling";

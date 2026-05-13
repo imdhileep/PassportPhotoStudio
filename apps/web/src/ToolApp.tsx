@@ -8,6 +8,7 @@ import { useLocalStorage } from "@/features/useLocalStorage";
 import { Stepper } from "@/components/Stepper";
 import {
   autoTuneEdgeParams,
+  birefNetMaskFromGrayscale,
   buildAlphaMask,
   centerCrop,
   compositeOnWhiteBackground,
@@ -26,6 +27,7 @@ import {
   removeEdgeHalo,
   segmentPerson,
   validateBackgroundWhite,
+  type BiRefNetStatus,
   type EdgeParams,
   type EdgeMetrics,
   type PassportRequirementReport,
@@ -190,6 +192,8 @@ export default function ToolApp() {
 
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [bundle, setBundle] = useState<Awaited<ReturnType<typeof loadVisionTasks>> | null>(null);
+  const [birefnetStatus, setBirefnetStatus] = useState<BiRefNetStatus>({ type: "idle" });
+  const birefnetWorkerRef = useRef<Worker | null>(null);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -595,6 +599,33 @@ export default function ToolApp() {
   }, []);
 
   useEffect(() => {
+    setBirefnetStatus({ type: "loading" });
+    const worker = new Worker(new URL("./workers/birefnet.worker.ts", import.meta.url), {
+      type: "module"
+    });
+    birefnetWorkerRef.current = worker;
+    const id = "init";
+    const handler = (event: MessageEvent) => {
+      const msg = event.data;
+      if (msg.id !== id) return;
+      if (msg.type === "ready") {
+        setBirefnetStatus({ type: "ready" });
+      } else if (msg.type === "progress") {
+        setBirefnetStatus({ type: "loading", progress: msg.progress });
+      } else if (msg.type === "error") {
+        setBirefnetStatus({ type: "error", message: msg.message });
+      }
+    };
+    worker.addEventListener("message", handler);
+    worker.postMessage({ type: "load", id });
+    return () => {
+      worker.removeEventListener("message", handler);
+      worker.terminate();
+      birefnetWorkerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     const checkFiles = async () => {
       const files = [
         `${appConfig.wasmBasePath}/vision_wasm_internal.wasm`,
@@ -675,7 +706,8 @@ export default function ToolApp() {
           cropZoom: debouncedCropZoom,
           qualityMode,
           maxSize: INTERACTIVE_MAX_SIZE,
-          maskThreshold: manualThreshold ? maskThreshold : undefined
+          maskThreshold: manualThreshold ? maskThreshold : undefined,
+          birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null
         });
         if (cancelled) return;
         processedCanvasRef.current = canvas;
@@ -797,7 +829,8 @@ export default function ToolApp() {
           cropZoom: debouncedCropZoom,
           qualityMode,
           maxSize: 960,
-          maskThreshold: manualThreshold ? maskThreshold : undefined
+          maskThreshold: manualThreshold ? maskThreshold : undefined,
+          birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null
         });
         const sharpnessScore = computeSharpnessScore(bitmap);
         const report = buildQualityReport(result.warnings, lightingStats, sharpnessScore);
@@ -1089,10 +1122,17 @@ export default function ToolApp() {
     try {
       const preparedForTune = prepareImageForProcessing(source, AUTO_TUNE_MAX_SIZE);
       const threshold = manualThreshold ? maskThreshold : qualityMap[qualityMode].threshold;
-      const segmentation = segmentPerson(bundle, preparedForTune.image);
-      const maskResult = extractSegmentationMask(segmentation, threshold);
-      if (!maskResult?.mask) return;
-      const built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
+
+      let built: ImageData | null = null;
+      if (birefnetWorkerRef.current && birefnetStatus.type === "ready") {
+        built = await segmentWithBiRefNet(birefnetWorkerRef.current, preparedForTune.image).catch(() => null);
+      }
+      if (!built) {
+        const segmentation = segmentPerson(bundle, preparedForTune.image);
+        const maskResult = extractSegmentationMask(segmentation, threshold);
+        if (!maskResult?.mask) return;
+        built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
+      }
       let candidate = built;
       const stats = maskStats(candidate);
       if (stats.coverage < 0.1 || stats.coverage > 0.9) {
@@ -1269,10 +1309,23 @@ export default function ToolApp() {
               )}
             </div>
           </div>
-          <div className="absolute bottom-3 left-3 rounded-full bg-black/50 px-3 py-1 text-[10px] text-white">
-            {`Live:${livePreview ? "on" : "off"} Cam:${cameraActive ? "on" : "off"} Models:${
-              modelStatus.ready ? "ready" : "loading"
-            }`}
+          <div className="absolute bottom-3 left-3 flex flex-col gap-1">
+            <div className="rounded-full bg-black/50 px-3 py-1 text-[10px] text-white">
+              {`Live:${livePreview ? "on" : "off"} Cam:${cameraActive ? "on" : "off"} Models:${
+                modelStatus.ready ? "ready" : "loading"
+              }`}
+            </div>
+            <div
+              className={`rounded-full px-3 py-1 text-[10px] text-white ${birefnetStatus.type === "ready" ? "bg-emerald-600/70" : birefnetStatus.type === "error" ? "bg-red-600/70" : birefnetStatus.type === "loading" ? "bg-amber-600/70" : "bg-black/50"}`}
+            >
+              {birefnetStatus.type === "ready"
+                ? "BiRefNet: ready"
+                : birefnetStatus.type === "error"
+                  ? "BiRefNet: failed (using MediaPipe)"
+                  : birefnetStatus.type === "loading" && typeof (birefnetStatus as { type: "loading"; progress?: number }).progress === "number"
+                    ? `BiRefNet: loading ${Math.round((birefnetStatus as { type: "loading"; progress?: number }).progress!)}%`
+                    : "BiRefNet: loading..."}
+            </div>
           </div>
         </div>
 
@@ -1343,7 +1396,8 @@ export default function ToolApp() {
           cropOffset,
           cropZoom,
           qualityMode,
-          maskThreshold: manualThreshold ? maskThreshold : undefined
+          maskThreshold: manualThreshold ? maskThreshold : undefined,
+          birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null
         });
         let standardOutput = renderPassport(canvas, standard, qualityMap[qualityMode].ppi);
         if (format === "jpeg" && backgroundColor === "transparent") {
@@ -2919,6 +2973,7 @@ const processImage = async ({
   qualityMode: QualityMode;
   maxSize?: number;
   maskThreshold?: number;
+  birefnetWorker?: Worker | null;
 }) => {
   const prepared = prepareImageForProcessing(image, maxSize);
   const workingImage = prepared.image;
@@ -2931,10 +2986,28 @@ const processImage = async ({
   const sourceImageData = toImageData(workingImage, imageWidth, imageHeight);
   try {
     const threshold = maskThreshold ?? qualityMap[qualityMode].threshold;
-    const segmentation = segmentPerson(bundle, workingImage);
-    const maskResult = extractSegmentationMask(segmentation, threshold);
-    if (maskResult?.mask) {
-      const built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
+    let built: ImageData | null = null;
+    let confidenceData: Float32Array | undefined;
+
+    if (birefnetWorker) {
+      // BiRefNet: superior edge quality, runs off main thread
+      built = await segmentWithBiRefNet(birefnetWorker, workingImage).catch((err) => {
+        console.warn("BiRefNet segmentation failed, falling back to MediaPipe", err);
+        return null;
+      });
+    }
+
+    if (!built) {
+      // Fallback: MediaPipe selfie segmenter
+      const segmentation = segmentPerson(bundle, workingImage);
+      const maskResult = extractSegmentationMask(segmentation, threshold);
+      if (maskResult?.mask) {
+        built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
+        confidenceData = maskResult.confidenceData;
+      }
+    }
+
+    if (built) {
       const stats = maskStats(built);
       if (stats.variance < 4) {
         refinedMask = null;
@@ -2960,7 +3033,7 @@ const processImage = async ({
             edgeIntensity: clamp(edgeIntensity, 0, 100),
             edgeRefineToggle: refineEdges
           },
-          confidenceMask: maskResult.confidenceData
+          confidenceMask: confidenceData
         });
         const refinedStats = maskStats(refined.mask);
         if (refinedStats.coverage < 0.05) {
@@ -3340,6 +3413,44 @@ const maskFromConfidenceArray = (data: Float32Array, width: number, height: numb
 const smoothstep = (edge0: number, edge1: number, x: number) => {
   const t = clamp((x - edge0) / Math.max(1e-6, edge1 - edge0), 0, 1);
   return t * t * (3 - 2 * t);
+};
+
+// Runs BiRefNet segmentation in the Web Worker and returns an ImageData alpha mask
+const segmentWithBiRefNet = (
+  worker: Worker,
+  image: HTMLCanvasElement | HTMLImageElement | ImageBitmap
+): Promise<ImageData> => {
+  return new Promise((resolve, reject) => {
+    const id = Math.random().toString(36).slice(2);
+    const canvas = document.createElement("canvas");
+    if (image instanceof HTMLImageElement) {
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+    } else {
+      canvas.width = image.width;
+      canvas.height = image.height;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return reject(new Error("No 2d context"));
+    ctx.drawImage(image, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const handler = (event: MessageEvent) => {
+      if (event.data.id !== id) return;
+      worker.removeEventListener("message", handler);
+      if (event.data.type === "mask") {
+        const gray = new Uint8ClampedArray(event.data.data);
+        resolve(birefNetMaskFromGrayscale(gray, event.data.width, event.data.height));
+      } else if (event.data.type === "error") {
+        reject(new Error(event.data.message));
+      }
+    };
+    worker.addEventListener("message", handler);
+    const buffer = imageData.data.buffer.slice(0);
+    worker.postMessage(
+      { type: "segment", id, data: buffer, width: imageData.width, height: imageData.height },
+      [buffer]
+    );
+  });
 };
 
 const invertMask = (mask: ImageData) => {

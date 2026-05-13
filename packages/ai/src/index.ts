@@ -4,3 +4,4 @@ export * from "./mask";
 export * from "./mediapipe";
 export * from "./edgeQuality";
 export * from "./passportCompliance";
+export * from "./birefnet";
