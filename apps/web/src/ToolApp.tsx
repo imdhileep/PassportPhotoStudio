@@ -1124,6 +1124,7 @@ export default function ToolApp() {
       const threshold = manualThreshold ? maskThreshold : qualityMap[qualityMode].threshold;
 
       let built: ImageData | null = null;
+      let tuneConfidenceData: Float32Array | undefined;
       if (birefnetWorkerRef.current && birefnetStatus.type === "ready") {
         built = await segmentWithBiRefNet(birefnetWorkerRef.current, preparedForTune.image).catch(() => null);
       }
@@ -1132,6 +1133,7 @@ export default function ToolApp() {
         const maskResult = extractSegmentationMask(segmentation, threshold);
         if (!maskResult?.mask) return;
         built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
+        tuneConfidenceData = maskResult.confidenceData;
       }
       let candidate = built;
       const stats = maskStats(candidate);
@@ -1146,7 +1148,7 @@ export default function ToolApp() {
       }
       const sourceData = toImageData(preparedForTune.image, preparedForTune.width, preparedForTune.height);
       const tuned = autoTuneEdgeParams(sourceData, candidate, {
-        confidenceMask: maskResult.confidenceData
+        confidenceMask: tuneConfidenceData
       });
       applyAutoEdgeSettings(tuned.params);
       setAutoEdgeParams(tuned.params);
@@ -2950,7 +2952,8 @@ const processImage = async ({
   cropZoom,
   qualityMode,
   maxSize,
-  maskThreshold
+  maskThreshold,
+  birefnetWorker
 }: {
   image: ImageBitmap | HTMLImageElement | HTMLCanvasElement;
   bundle: Awaited<ReturnType<typeof loadVisionTasks>>;
@@ -3448,7 +3451,7 @@ const segmentWithBiRefNet = (
     const buffer = imageData.data.buffer.slice(0);
     worker.postMessage(
       { type: "segment", id, data: buffer, width: imageData.width, height: imageData.height },
-      [buffer]
+      { transfer: [buffer] }
     );
   });
 };

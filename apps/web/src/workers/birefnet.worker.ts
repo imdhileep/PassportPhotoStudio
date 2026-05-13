@@ -65,9 +65,10 @@ self.addEventListener("message", async (event: MessageEvent<IncomingMessage>) =>
         pixels[i * 4 + 2] = 255;
         pixels[i * 4 + 3] = gray[i];
       }
-      self.postMessage({ type: "mask", id, data: pixels.buffer, width: mw, height: mh }, [
-        pixels.buffer
-      ]);
+      self.postMessage(
+        { type: "mask", id, data: pixels.buffer, width: mw, height: mh },
+        { transfer: [pixels.buffer] }
+      );
     } catch (err) {
       self.postMessage({ type: "error", id, message: String(err) });
     }
