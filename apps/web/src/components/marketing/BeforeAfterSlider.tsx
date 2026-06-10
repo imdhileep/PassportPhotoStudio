@@ -6,7 +6,7 @@ const afterSrc = "/examples/after-1.png";
 export default function BeforeAfterSlider() {
   const [split, setSplit] = useState(55);
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4">
+    <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4">
       <div className="relative aspect-square w-full overflow-hidden rounded-2xl">
         <img
           src={afterSrc}
@@ -27,13 +27,13 @@ export default function BeforeAfterSlider() {
               style={{ left: `${split}%` }}
             />
             <div
-              className="absolute -top-2 h-8 w-8 -translate-x-1/2 rounded-full border border-white/30 bg-black/40"
+              className="absolute -top-2 h-8 w-8 -translate-x-1/2 rounded-full border border-slate-200 bg-slate-900/5"
               style={{ left: `${split}%` }}
             />
           </div>
         </div>
       </div>
-      <div className="mt-4 flex items-center justify-between text-xs text-slate-300">
+      <div className="mt-4 flex items-center justify-between text-xs text-slate-600">
         <span>Before</span>
         <input
           aria-label="Before and after slider"

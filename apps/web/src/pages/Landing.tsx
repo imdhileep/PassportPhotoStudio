@@ -99,7 +99,7 @@ export default function Landing() {
         title="Passport photos without the studio hassle"
         description="Passport Photo Studio helps you create compliant ID and passport images at home. The workflow is built for clarity: you upload or capture a photo, the AI aligns your face to official proportions, removes the background, and prepares exports for digital submissions or print-ready sheets."
       >
-        <div className="grid gap-4 text-sm text-slate-300">
+        <div className="grid gap-4 text-sm text-slate-600">
           <p>
             Instead of guessing photo size or paying for reprints, you can follow a guided process that checks the most
             common rejection reasons. The tool highlights head size, tilt, framing, and lighting issues so you can fix
@@ -127,7 +127,7 @@ export default function Landing() {
         title="US, India, and more presets"
         description="We include popular passport sizes plus custom profiles. For any country not listed, you can enter the exact dimensions."
       >
-        <div className="grid gap-4 text-sm text-slate-300">
+        <div className="grid gap-4 text-sm text-slate-600">
           <p>
             Current presets include United States (2x2 in), India (35x45 mm), Canada (50x70 mm), UK (35x45 mm), EU
             standards, and Australia (35x45 mm). If your authority requests a unique size, switch to Custom and save the
@@ -144,9 +144,9 @@ export default function Landing() {
         <div className="grid gap-4 md:grid-cols-3">
           {["United States", "India", "Canada", "United Kingdom", "EU", "Australia"].map((country) => (
             <Card key={country} className="glass">
-              <div className="p-5 text-sm text-slate-300">
-                <p className="text-white">{country}</p>
-                <p className="text-xs text-slate-400">Passport + ID sizes supported</p>
+              <div className="p-5 text-sm text-slate-600">
+                <p className="text-slate-900">{country}</p>
+                <p className="text-xs text-slate-500">Passport + ID sizes supported</p>
               </div>
             </Card>
           ))}
@@ -158,7 +158,7 @@ export default function Landing() {
         title="Avoid the most frequent issues"
         description="Most rejections happen because of framing, lighting, or background errors. Our warning system makes those problems easy to spot."
       >
-        <div className="grid gap-4 text-sm text-slate-300">
+        <div className="grid gap-4 text-sm text-slate-600">
           <ul className="list-disc space-y-2 pl-5">
             <li>Head size too small or too large relative to the frame.</li>
             <li>Uneven lighting or strong shadows on the face.</li>
@@ -184,7 +184,7 @@ export default function Landing() {
         description="Here are the most common questions about passport photo compliance, printing, and acceptance."
       >
         <Faq />
-        <div className="mt-6 grid gap-3 text-sm text-slate-300">
+        <div className="mt-6 grid gap-3 text-sm text-slate-600">
           <p>
             <strong>Can I submit a digital photo?</strong> Most online applications accept a digital file as long as the
             size and background match their rules.
@@ -201,8 +201,8 @@ export default function Landing() {
 
       <Section eyebrow="Integration" title="How to integrate with processing API later">
         <Card className="glass">
-          <div className="space-y-2 p-5 text-sm text-slate-300">
-            <p className="text-white">TODO hooks</p>
+          <div className="space-y-2 p-5 text-sm text-slate-600">
+            <p className="text-slate-900">TODO hooks</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>Swap the upload handler to POST to your processing API.</li>
               <li>Stream progress updates into the /app shell preview panel.</li>

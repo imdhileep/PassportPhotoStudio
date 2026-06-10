@@ -17,10 +17,10 @@ export default function Hero() {
           ))}
         </div>
         <div>
-          <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
+          <h1 className="font-display text-4xl font-bold text-slate-900 md:text-5xl">
             Perfect Passport Photos in <span className="text-gradient">60 Seconds</span>.
           </h1>
-          <p className="mt-4 text-base text-slate-300">
+          <p className="mt-4 text-base text-slate-600">
             AI background removal, correct sizing, print-ready sheets — privacy-first.
           </p>
         </div>

@@ -19,9 +19,9 @@ export default function Faq() {
       {faqs.map((faq) => (
         <details
           key={faq.q}
-          className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-slate-300"
+          className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600"
         >
-          <summary className="cursor-pointer text-white">{faq.q}</summary>
+          <summary className="cursor-pointer text-slate-900">{faq.q}</summary>
           <p className="mt-2">{faq.a}</p>
         </details>
       ))}

@@ -19,9 +19,9 @@ export default function Examples() {
       {examples.map((example) => (
         <Card key={example.label} className="glass">
           <div className="space-y-4 p-5">
-            <div className="grid gap-3 rounded-2xl bg-white/5 p-3 md:grid-cols-2">
+            <div className="grid gap-3 rounded-2xl bg-white p-3 md:grid-cols-2">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Before</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Before</p>
                 <div className="mt-2 aspect-square w-full rounded-2xl bg-white p-3">
                   <img
                     src={example.before}
@@ -32,7 +32,7 @@ export default function Examples() {
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">After</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">After</p>
                 <div className="mt-2 aspect-square w-full rounded-2xl bg-white p-3">
                   <img
                     src={example.after}
@@ -43,9 +43,9 @@ export default function Examples() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between text-sm text-slate-300">
-              <span className="text-white">{example.label}</span>
-              <span className="text-xs text-slate-400">Before → After</span>
+            <div className="flex items-center justify-between text-sm text-slate-600">
+              <span className="text-slate-900">{example.label}</span>
+              <span className="text-xs text-slate-500">Before → After</span>
             </div>
           </div>
         </Card>

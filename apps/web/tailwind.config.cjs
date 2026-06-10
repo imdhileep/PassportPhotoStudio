@@ -39,10 +39,10 @@ module.exports = {
           900: "#78350f",
           950: "#451a03"
         },
-        /* Surface levels — LeepCast near-black ink / surface */
-        night: "#0a0b14",
-        surface: "#12131f",
-        elevated: "#181a26",
+        /* Surface levels — clean light theme (page / card / elevated) */
+        night: "#f7f8fa",
+        surface: "#ffffff",
+        elevated: "#ffffff",
         /* Semantic */
         flame: "#ef4444",
         gold: "#f59e0b",
@@ -52,14 +52,14 @@ module.exports = {
         sky: "#eef2ff"
       },
       boxShadow: {
-        brand: "0 0 20px rgba(245, 158, 11, 0.35)",
-        "brand-sm": "0 0 10px rgba(245, 158, 11, 0.25)",
-        card: "0 24px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.35)"
+        brand: "0 6px 16px rgba(245, 158, 11, 0.25)",
+        "brand-sm": "0 2px 8px rgba(245, 158, 11, 0.2)",
+        card: "0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.05)"
       },
       backgroundImage: {
         "brand-gradient": "linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)",
         "amber-gradient": "linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%)",
-        "surface-gradient": "linear-gradient(155deg, rgba(18,19,31,0.94), rgba(10,11,20,0.88))"
+        "surface-gradient": "linear-gradient(155deg, #ffffff, #f7f8fa)"
       },
       keyframes: {
         "fade-in": {
