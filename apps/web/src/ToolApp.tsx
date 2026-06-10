@@ -195,6 +195,10 @@ export default function ToolApp() {
   const [supportsFilters, setSupportsFilters] = useState(true);
   const [supportsWebgl, setSupportsWebgl] = useState(true);
 
+  // Caches the raw segmentation mask for the interactive preview so adjusting background/refine/
+  // color/crop reuses it instead of re-running the model. Invalidated by the key below.
+  const segCacheRef = useRef<SegmentationCacheEntry | null>(null);
+
   const [modelStatus, setModelStatus] = useState<ModelStatus>({
     ready: false,
     loading: false,
@@ -308,6 +312,11 @@ export default function ToolApp() {
   };
   const maxStep = inputUrl ? 6 : cameraActive ? 2 : 1;
   const activeStep = currentStep;
+  // Identity of the segmentation result: changes only when something that actually affects the mask
+  // changes (the photo, retry, processing resolution, mask threshold, or which engine is ready).
+  const segCacheKey = `${inputUrl ?? ""}|${retryKey}|${INTERACTIVE_MAX_SIZE}|${qualityMode}|${
+    manualThreshold ? maskThreshold : "auto"
+  }|${birefnetStatus.type === "ready" ? "birefnet" : "mediapipe"}`;
   const showModelStatus = false;
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
@@ -733,7 +742,9 @@ export default function ToolApp() {
           qualityMode,
           maxSize: INTERACTIVE_MAX_SIZE,
           maskThreshold: manualThreshold ? maskThreshold : undefined,
-          birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null
+          birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null,
+          segmentationCache: segCacheRef,
+          segmentationCacheKey: segCacheKey
         });
         if (cancelled) return;
         processedCanvasRef.current = canvas;
@@ -807,7 +818,8 @@ export default function ToolApp() {
     qualityMode,
     birefnetStatus.type,
     livePreview,
-    setLivePreview
+    setLivePreview,
+    segCacheKey
   ]);
 
   useEffect(() => {
@@ -2972,6 +2984,14 @@ const getAutoRetouchAdjustments = (
   return { brightnessDelta, contrastDelta, saturationDelta };
 };
 
+// The raw segmentation mask depends only on the source image + resolution, not on any of the
+// post-processing controls (background, refine, color, crop). Caching it lets the interactive
+// preview reuse the mask and skip the expensive ~6s re-segmentation when only those controls change.
+type SegmentationCacheEntry = { key: string; mask: ImageData; confidence?: Float32Array };
+
+const cloneImageData = (img: ImageData) =>
+  new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
+
 const processImage = async ({
   image,
   bundle,
@@ -2994,7 +3014,9 @@ const processImage = async ({
   qualityMode,
   maxSize,
   maskThreshold,
-  birefnetWorker
+  birefnetWorker,
+  segmentationCache,
+  segmentationCacheKey
 }: {
   image: ImageBitmap | HTMLImageElement | HTMLCanvasElement;
   bundle: Awaited<ReturnType<typeof loadVisionTasks>>;
@@ -3018,6 +3040,8 @@ const processImage = async ({
   maxSize?: number;
   maskThreshold?: number;
   birefnetWorker?: Worker | null;
+  segmentationCache?: { current: SegmentationCacheEntry | null };
+  segmentationCacheKey?: string;
 }) => {
   const prepared = prepareImageForProcessing(image, maxSize);
   const workingImage = prepared.image;
@@ -3033,21 +3057,41 @@ const processImage = async ({
     let built: ImageData | null = null;
     let confidenceData: Float32Array | undefined;
 
-    if (birefnetWorker) {
-      // BiRefNet: superior edge quality, runs off main thread
-      built = await segmentWithBiRefNet(birefnetWorker, workingImage).catch((err) => {
-        console.warn("BiRefNet segmentation failed, falling back to MediaPipe", err);
-        return null;
-      });
-    }
+    const cache = segmentationCache;
+    const cacheHit =
+      !!cache && !!segmentationCacheKey && !!cache.current && cache.current.key === segmentationCacheKey;
 
-    if (!built) {
-      // Fallback: MediaPipe selfie segmenter
-      const segmentation = segmentPerson(bundle, workingImage);
-      const maskResult = extractSegmentationMask(segmentation, threshold);
-      if (maskResult?.mask) {
-        built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
-        confidenceData = maskResult.confidenceData;
+    if (cacheHit && cache && cache.current) {
+      // Reuse the cached mask (cloned so the refinement pass below can't mutate it). This is what
+      // makes background/refine/color adjustments instant instead of re-running segmentation.
+      built = cloneImageData(cache.current.mask);
+      confidenceData = cache.current.confidence;
+    } else {
+      if (birefnetWorker) {
+        // BiRefNet: superior edge quality, runs off main thread
+        built = await segmentWithBiRefNet(birefnetWorker, workingImage).catch((err) => {
+          console.warn("BiRefNet segmentation failed, falling back to MediaPipe", err);
+          return null;
+        });
+      }
+
+      if (!built) {
+        // Fallback: MediaPipe selfie segmenter
+        const segmentation = segmentPerson(bundle, workingImage);
+        const maskResult = extractSegmentationMask(segmentation, threshold);
+        if (maskResult?.mask) {
+          built = maskResult.isAlpha ? maskResult.mask : buildAlphaMask(maskResult.mask);
+          confidenceData = maskResult.confidenceData;
+        }
+      }
+
+      if (built && cache && segmentationCacheKey) {
+        // Store a copy so later passes never corrupt the cached mask.
+        cache.current = {
+          key: segmentationCacheKey,
+          mask: cloneImageData(built),
+          confidence: confidenceData
+        };
       }
     }
 
