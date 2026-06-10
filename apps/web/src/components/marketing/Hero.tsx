@@ -7,8 +7,7 @@ export default function Hero() {
     <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-6 py-14 md:grid-cols-[1.1fr_0.9fr]">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="flex flex-col gap-6"
       >
@@ -18,8 +17,8 @@ export default function Hero() {
           ))}
         </div>
         <div>
-          <h1 className="font-display text-4xl text-white md:text-5xl">
-            Perfect Passport Photos in 60 Seconds.
+          <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
+            Perfect Passport Photos in <span className="text-gradient">60 Seconds</span>.
           </h1>
           <p className="mt-4 text-base text-slate-300">
             AI background removal, correct sizing, print-ready sheets — privacy-first.
@@ -42,8 +41,7 @@ export default function Hero() {
       </motion.div>
       <motion.div
         initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1 }}
       >
         <BeforeAfterSlider />
