@@ -14,6 +14,9 @@ env.useBrowserCache = true;
 env.localModelPath = "/models";
 
 const MODEL_ID = "briaai/RMBG-1.4";
+// RMBG-1.4's preprocessor resizes to 1024x1024 (do_pad: false → square). Feeding the model an image
+// already at this size keeps preprocessing cheap.
+const MODEL_INPUT_SIZE = 1024;
 
 type IncomingMessage =
   | { type: "load"; id: string; model?: string }
@@ -88,7 +91,23 @@ self.addEventListener("message", async (event: MessageEvent<IncomingMessage>) =>
     try {
       const { data, width, height } = event.data;
       const rgba = new Uint8ClampedArray(data);
-      const image = new RawImage(rgba, width, height, 4);
+
+      // Resize the incoming frame to the model's native 1024x1024 input using OffscreenCanvas
+      // (fast, native) and drop the alpha channel. Handing transformers.js a large hand-built
+      // 4-channel RawImage makes it run a pure-JS resize/preprocess that takes tens of seconds —
+      // that was the "takes a long time" hang. With the input already at 1024x1024 the processor's
+      // own resize is a no-op.
+      const srcCanvas = new OffscreenCanvas(width, height);
+      const srcCtx = srcCanvas.getContext("2d")!;
+      srcCtx.putImageData(new ImageData(rgba, width, height), 0, 0);
+      const inCanvas = new OffscreenCanvas(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+      const inCtx = inCanvas.getContext("2d", { willReadFrequently: true })!;
+      inCtx.drawImage(srcCanvas, 0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+      const inputRgba = new Uint8ClampedArray(
+        inCtx.getImageData(0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE).data
+      );
+      const image = new RawImage(inputRgba, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, 4).rgb();
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const results: Array<any> = await (segmenter as any)(image);
       const foreground = results.find((r) => r.label === "foreground") ?? results[0];
@@ -96,23 +115,34 @@ self.addEventListener("message", async (event: MessageEvent<IncomingMessage>) =>
         self.postMessage({ type: "error", id, message: "No mask returned by the model" });
         return;
       }
-      // mask is a RawImage with channels=1 (grayscale 0-255, white = foreground)
+      // mask is a RawImage with channels=1 (grayscale 0-255, white = foreground), at model size.
       const maskImg: RawImage = foreground.mask;
-      const gray = maskImg.data as Uint8ClampedArray;
+      const maskGray = maskImg.data as Uint8ClampedArray;
       const mw = maskImg.width;
       const mh = maskImg.height;
 
-      // Convert grayscale → RGBA alpha mask (white + alpha=gray value)
-      const pixels = new Uint8ClampedArray(mw * mh * 4);
+      // Resize the grayscale mask back to the original width x height (route it through a canvas
+      // alpha channel so the resize is native/fast), then emit a SINGLE-CHANNEL grayscale buffer.
+      // birefNetMaskFromGrayscale on the main thread expects grayscale; the previous code emitted
+      // RGBA here, which the main thread misread as grayscale and left most of the background in.
+      const maskRgba = new Uint8ClampedArray(mw * mh * 4);
       for (let i = 0; i < mw * mh; i++) {
-        pixels[i * 4] = 255;
-        pixels[i * 4 + 1] = 255;
-        pixels[i * 4 + 2] = 255;
-        pixels[i * 4 + 3] = gray[i];
+        maskRgba[i * 4 + 3] = maskGray[i];
       }
+      const maskCanvas = new OffscreenCanvas(mw, mh);
+      maskCanvas.getContext("2d")!.putImageData(new ImageData(maskRgba, mw, mh), 0, 0);
+      const outCanvas = new OffscreenCanvas(width, height);
+      const outCtx = outCanvas.getContext("2d", { willReadFrequently: true })!;
+      outCtx.drawImage(maskCanvas, 0, 0, width, height);
+      const outRgba = outCtx.getImageData(0, 0, width, height).data;
+      const grayOut = new Uint8ClampedArray(width * height);
+      for (let i = 0; i < width * height; i++) {
+        grayOut[i] = outRgba[i * 4 + 3];
+      }
+
       self.postMessage(
-        { type: "mask", id, data: pixels.buffer, width: mw, height: mh },
-        { transfer: [pixels.buffer] }
+        { type: "mask", id, data: grayOut.buffer, width, height },
+        { transfer: [grayOut.buffer] }
       );
     } catch (err) {
       self.postMessage({ type: "error", id, message: String(err) });
