@@ -7,7 +7,7 @@ export type CropRect = {
   height: number;
 };
 
-export type WarningLevel = "info" | "warning";
+export type WarningLevel = "info" | "warning" | "error";
 
 export type WarningItem = {
   id: string;

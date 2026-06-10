@@ -4,7 +4,8 @@ Production-grade, offline-capable passport photo editor with AI background remov
 
 ## Features
 - Camera capture + upload preview (always visible).
-- Background removal via MediaPipe ImageSegmenter with GPU-to-CPU fallback.
+- Background removal via BiRefNet (RMBG-1.4) running in a Web Worker on WebGPU, with an automatic
+  WASM/CPU fallback and a MediaPipe selfie-segmenter fallback if the primary model is unavailable.
 - Face landmark alignment + auto-crop with warnings (tilt, size, framing).
 - Manual crop adjust (drag/zoom) and edge refinement controls.
 - Auto edge tuning: adaptive halo trim, matte tighten, feather, refine strength, edge intensity.
@@ -25,15 +26,19 @@ Production-grade, offline-capable passport photo editor with AI background remov
 ```
 
 ## Quick start
-1) Install dependencies:
+1) Install dependencies (web + AI package only — the optional native server is installed separately):
 ```bash
 npm install
 ```
 
-2) (Optional) Download models + wasm for offline use:
+2) (Recommended) Download the wasm + models for same-origin/offline use. This also fetches the
+   primary background-removal model (RMBG-1.4, ~44MB) into `apps/web/public/models` so the app does
+   not depend on a runtime download from HuggingFace:
 ```bash
 npm run offline:setup
 ```
+If you skip this, the app still works: the model is loaded from the HuggingFace Hub at runtime and
+cached by the browser.
 
 3) Start the web app:
 ```bash
@@ -41,6 +46,12 @@ npm run dev
 ```
 
 The app runs at `http://localhost:5190`.
+
+> **Deploying (Vercel):** for a fully self-hosted/offline production build, run `npm run offline:setup`
+> as part of the build (or commit `apps/web/public/models/briaai/`) so the model ships same-origin.
+
+> **Node version:** the web app builds on Node 20–26. The optional server uses native modules
+> (`better-sqlite3`, `sharp`); install it separately with `npm run server:install`.
 
 ## Offline setup (manual)
 Windows PowerShell:
@@ -58,10 +69,11 @@ Offline files are stored in:
 - `apps/web/public/models`
 
 ## Optional server mode
-The optional server converts exports to JPG, stores history (SQLite), creates share links, serves template rules, and accepts basic order creation.
+The optional server converts exports to JPG, stores history (SQLite), creates share links, serves template rules, and accepts basic order creation. It is intentionally excluded from the root install so its native dependencies never block the web app.
 
-1) Start the server:
+1) Install and start the server:
 ```bash
+npm run server:install
 npm run server:dev
 ```
 
@@ -107,10 +119,13 @@ VITE_SERVER_URL=http://localhost:4310
 
 ## Scripts
 - `npm run dev` - start Vite dev server
-- `npm run build` - production build
+- `npm run build` - typecheck (`tsc --noEmit`) then production build
+- `npm run typecheck` - TypeScript typecheck only
+- `npm run lint` - ESLint over `apps/web/src`
 - `npm run preview` - preview production build
-- `npm run offline:setup` - download offline wasm/models
-- `npm --workspace apps/server run test` - run server unit tests
+- `npm run offline:setup` - download wasm + models (incl. the RMBG-1.4 primary model) for same-origin/offline use
+- `npm run server:install` - install the optional server's dependencies
+- `npm run server:dev` - start the optional server
 - `npm --workspace packages/ai run test` - run AI matte + edge-quality tests
 
 ## Configuration
