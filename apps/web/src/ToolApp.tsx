@@ -111,8 +111,19 @@ const initialDrag: DragState = { active: false, startX: 0, startY: 0, originX: 0
 const INTERACTIVE_MAX_SIZE = 1400;
 const AUTO_TUNE_MAX_SIZE = 900;
 
+// Upper bound on first-time model download + init. The model is ~44MB; on a slow link the
+// HuggingFace fallback can take a while, so this is generous. If exceeded we surface an error
+// instead of leaving the user staring at an indefinite "loading" state.
+const MODEL_LOAD_TIMEOUT_MS = 120_000;
+
+const warningCardStyles: Record<WarningItem["level"], string> = {
+  info: "border-white/10 bg-white/5",
+  warning: "border-amber-400/30 bg-amber-500/10",
+  error: "border-red-500/40 bg-red-500/15"
+};
+
 const warningCard = (warning: WarningItem) => (
-  <div key={warning.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+  <div key={warning.id} className={`rounded-2xl border p-3 ${warningCardStyles[warning.level]}`}>
     <p className="text-sm font-semibold text-white">{warning.title}</p>
     <p className="text-xs text-slate-300">{warning.detail}</p>
   </div>
@@ -605,20 +616,35 @@ export default function ToolApp() {
     });
     birefnetWorkerRef.current = worker;
     const id = "init";
+    let settled = false;
+    // Never let model loading hang indefinitely — bound it and surface an actionable error.
+    const loadTimer = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      setBirefnetStatus({
+        type: "error",
+        message: "Model load timed out — falling back to the basic remover. Reload to retry."
+      });
+    }, MODEL_LOAD_TIMEOUT_MS);
     const handler = (event: MessageEvent) => {
       const msg = event.data;
       if (msg.id !== id) return;
       if (msg.type === "ready") {
+        settled = true;
+        window.clearTimeout(loadTimer);
         setBirefnetStatus({ type: "ready" });
       } else if (msg.type === "progress") {
         setBirefnetStatus({ type: "loading", progress: msg.progress });
       } else if (msg.type === "error") {
+        settled = true;
+        window.clearTimeout(loadTimer);
         setBirefnetStatus({ type: "error", message: msg.message });
       }
     };
     worker.addEventListener("message", handler);
     worker.postMessage({ type: "load", id });
     return () => {
+      window.clearTimeout(loadTimer);
       worker.removeEventListener("message", handler);
       worker.terminate();
       birefnetWorkerRef.current = null;
@@ -774,7 +800,14 @@ export default function ToolApp() {
     inputUrl,
     retryKey,
     manualThreshold,
-    maskThreshold
+    maskThreshold,
+    // Re-run when the quality mode changes and, crucially, when BiRefNet finishes loading: an
+    // image processed with the MediaPipe fallback while the model was still downloading must be
+    // re-processed with the better model once it's ready (otherwise the user keeps the coarse cut).
+    qualityMode,
+    birefnetStatus.type,
+    livePreview,
+    setLivePreview
   ]);
 
   useEffect(() => {
@@ -906,6 +939,10 @@ export default function ToolApp() {
     return () => {
       cancelled = true;
     };
+    // requestAnimationFrame render loop gated by livePreview + cameraActive. The omitted values
+    // (captureFrame, inputUrl, qualityMode, etc.) are read live inside the loop; depending on the
+    // recreated-every-render function identities would tear down and restart the loop each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     livePreview,
     bundle,
@@ -1170,6 +1207,10 @@ export default function ToolApp() {
     if (autoTuneKeyRef.current === key) return;
     autoTuneKeyRef.current = key;
     void runAutoTuneForImage(inputImage, true);
+    // runAutoTuneForImage is re-created every render; the autoTuneKeyRef guard above already makes
+    // this a one-shot per image/threshold, so depending on the function identity would only add
+    // redundant churn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputImage, bundle, inputUrl, modelStatus.ready, manualThreshold, maskThreshold]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -3054,9 +3095,10 @@ const processImage = async ({
     refinedMask = createFullMask(imageWidth, imageHeight);
     backgroundWarnings.push({
       id: "bg_failed",
-      level: "warning",
-      title: "Background removal unavailable",
-      detail: "Using the original background. Try again after models load."
+      level: "error",
+      title: "Background not removed",
+      detail:
+        "The background-removal model couldn't process this photo, so the original background is still showing. Reload to retry — if it keeps happening, check your connection or try a clearer, well-lit photo."
     });
   }
   const normalizedBackground = backgroundColor.trim().toLowerCase();
@@ -3418,6 +3460,11 @@ const smoothstep = (edge0: number, edge1: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+// Hard ceiling on a single segmentation call. Inference runs in the worker (off the main
+// thread), but if the worker wedges we must reject rather than leave the await hanging forever
+// (which is what made the app look "frozen"). The caller falls back to MediaPipe on rejection.
+const SEGMENT_TIMEOUT_MS = 60_000;
+
 // Runs BiRefNet segmentation in the Web Worker and returns an ImageData alpha mask
 const segmentWithBiRefNet = (
   worker: Worker,
@@ -3437,8 +3484,10 @@ const segmentWithBiRefNet = (
     if (!ctx) return reject(new Error("No 2d context"));
     ctx.drawImage(image, 0, 0);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const timers = { id: 0 };
     const handler = (event: MessageEvent) => {
       if (event.data.id !== id) return;
+      window.clearTimeout(timers.id);
       worker.removeEventListener("message", handler);
       if (event.data.type === "mask") {
         const gray = new Uint8ClampedArray(event.data.data);
@@ -3448,6 +3497,10 @@ const segmentWithBiRefNet = (
       }
     };
     worker.addEventListener("message", handler);
+    timers.id = window.setTimeout(() => {
+      worker.removeEventListener("message", handler);
+      reject(new Error("Segmentation timed out"));
+    }, SEGMENT_TIMEOUT_MS);
     const buffer = imageData.data.buffer.slice(0);
     worker.postMessage(
       { type: "segment", id, data: buffer, width: imageData.width, height: imageData.height },

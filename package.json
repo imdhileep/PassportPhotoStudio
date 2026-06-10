@@ -2,14 +2,17 @@
   "name": "passport-photo-studio",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/web",
+    "packages/ai"
   ],
   "scripts": {
     "dev": "npm --workspace apps/web run dev",
     "build": "npm --workspace apps/web run build",
     "preview": "npm --workspace apps/web run preview",
+    "typecheck": "npm --workspace apps/web run typecheck",
+    "lint": "npm --workspace apps/web run lint",
     "offline:setup": "node scripts/offline-setup.mjs",
-    "server:dev": "npm --workspace apps/server run dev"
+    "server:install": "npm install --prefix apps/server",
+    "server:dev": "npm --prefix apps/server run dev"
   }
 }
