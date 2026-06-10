@@ -28,11 +28,11 @@ export const Stepper = ({
             className={cn(
               "group flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200",
               isActive
-                ? "bg-indigo-500/15 text-indigo-300"
+                ? "bg-indigo-500/15 text-amber-700"
                 : isCompleted
-                  ? "text-indigo-400/70 hover:bg-indigo-500/8 hover:text-indigo-300"
+                  ? "text-amber-700/70 hover:bg-indigo-500/8 hover:text-amber-700"
                   : isEnabled
-                    ? "text-slate-500 hover:bg-white/5 hover:text-slate-400"
+                    ? "text-slate-500 hover:bg-white hover:text-slate-500"
                     : "cursor-not-allowed text-slate-600"
             )}
           >
@@ -41,12 +41,12 @@ export const Stepper = ({
               className={cn(
                 "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-200",
                 isActive
-                  ? "bg-indigo-500 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                  ? "bg-indigo-500 text-slate-900 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
                   : isCompleted
-                    ? "bg-indigo-600/60 text-indigo-200"
+                    ? "bg-indigo-600/60 text-amber-700"
                     : isEnabled
-                      ? "border border-white/15 bg-white/5 text-slate-500"
-                      : "border border-white/8 text-slate-700"
+                      ? "border border-slate-200 bg-white text-slate-500"
+                      : "border border-slate-200 text-slate-700"
               )}
             >
               {isCompleted ? (
@@ -65,7 +65,7 @@ export const Stepper = ({
             <div
               className={cn(
                 "mx-0.5 h-px w-4 transition-colors duration-300",
-                stepIndex < active ? "bg-indigo-500/40" : "bg-white/8"
+                stepIndex < active ? "bg-indigo-500/40" : "bg-white"
               )}
             />
           )}

@@ -164,10 +164,10 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
       </CardHeader>
       <div className="grid gap-6 px-6 pb-6">
         <label
-          className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 text-sm text-slate-300 transition ${
+          className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 text-sm text-slate-600 transition ${
             isDragging
               ? "border-ocean bg-ocean/10"
-              : "border-white/20 bg-white/5 hover:border-white/50"
+              : "border-slate-200 bg-white hover:border-slate-200"
           }`}
           onDragOver={(event) => {
             event.preventDefault();
@@ -189,8 +189,8 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
               handleFileSelected(event.target.files?.[0]);
             }}
           />
-          <span className="text-white">{fileName ?? "Drag & drop your photo here"}</span>
-          <span className="text-xs text-slate-400">Or capture inside the app after you start.</span>
+          <span className="text-slate-900">{fileName ?? "Drag & drop your photo here"}</span>
+          <span className="text-xs text-slate-500">Or capture inside the app after you start.</span>
           <button
             type="button"
             className="text-xs text-ocean hover:underline"
@@ -205,12 +205,12 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Country</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Country</p>
             <input
               list="country-options"
               value={country}
               onChange={(event) => setCountry(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-4 py-2 text-sm text-white"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900"
               aria-label="Country"
             />
             <datalist id="country-options">
@@ -220,7 +220,7 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
             </datalist>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Document Type</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Document Type</p>
             <Select value={docType} onValueChange={setDocType}>
               <SelectTrigger className="mt-2">
                 <SelectValue placeholder="Choose document" />
@@ -235,7 +235,7 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
             </Select>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Output</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Output</p>
             <Select value={output} onValueChange={setOutput}>
               <SelectTrigger className="mt-2">
                 <SelectValue placeholder="Choose output" />
@@ -260,41 +260,41 @@ export default function UploadCard({ onGenerate }: UploadCardProps) {
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-white">Skip queue</p>
-                <p className="text-xs text-slate-400">Paid priority processing.</p>
+                <p className="text-sm font-semibold text-slate-900">Skip queue</p>
+                <p className="text-xs text-slate-500">Paid priority processing.</p>
               </div>
               <Switch checked={prioritySkipQueue} onCheckedChange={setPrioritySkipQueue} />
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-white">Human verification</p>
-                <p className="text-xs text-slate-400">Manual review add-on.</p>
+                <p className="text-sm font-semibold text-slate-900">Human verification</p>
+                <p className="text-xs text-slate-500">Manual review add-on.</p>
               </div>
               <Switch checked={humanVerificationAddon} onCheckedChange={setHumanVerificationAddon} />
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-white">Clothing adjustment</p>
-                <p className="text-xs text-slate-400">Premium manual service.</p>
+                <p className="text-sm font-semibold text-slate-900">Clothing adjustment</p>
+                <p className="text-xs text-slate-500">Premium manual service.</p>
               </div>
               <Switch checked={clothingAdjustmentAddon} onCheckedChange={setClothingAdjustmentAddon} />
             </div>
           </div>
         </div>
-        {templatesLoading && <p className="text-xs text-slate-400">Loading country templates...</p>}
-        {templatesError && <p className="text-xs text-amber-300">{templatesError}</p>}
+        {templatesLoading && <p className="text-xs text-slate-500">Loading country templates...</p>}
+        {templatesError && <p className="text-xs text-amber-700">{templatesError}</p>}
         {selectedTemplate && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
-            <p className="font-semibold text-white">Compliance rules</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600">
+            <p className="font-semibold text-slate-900">Compliance rules</p>
             <p className="mt-1">{selectedTemplate.rules.notes}</p>
-            <p className="mt-2 text-slate-400">
+            <p className="mt-2 text-slate-500">
               Allowed edits:{" "}
               {[
                 selectedTemplate.rules.allowCrop ? "crop" : null,

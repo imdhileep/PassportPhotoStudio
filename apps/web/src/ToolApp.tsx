@@ -117,15 +117,15 @@ const AUTO_TUNE_MAX_SIZE = 900;
 const MODEL_LOAD_TIMEOUT_MS = 120_000;
 
 const warningCardStyles: Record<WarningItem["level"], string> = {
-  info: "border-white/10 bg-white/5",
+  info: "border-slate-200 bg-white",
   warning: "border-amber-400/30 bg-amber-500/10",
   error: "border-red-500/40 bg-red-500/15"
 };
 
 const warningCard = (warning: WarningItem) => (
   <div key={warning.id} className={`rounded-2xl border p-3 ${warningCardStyles[warning.level]}`}>
-    <p className="text-sm font-semibold text-white">{warning.title}</p>
-    <p className="text-xs text-slate-300">{warning.detail}</p>
+    <p className="text-sm font-semibold text-slate-900">{warning.title}</p>
+    <p className="text-xs text-slate-600">{warning.detail}</p>
   </div>
 );
 
@@ -353,13 +353,13 @@ export default function ToolApp() {
     : undefined;
   const batchActive = batchItems.length > 1;
   const inputPreview = (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/60">
-      <div className="absolute inset-0 border border-white/10" />
+    <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-100/60">
+      <div className="absolute inset-0 border border-slate-200" />
       <div className="absolute inset-0 pointer-events-none">
         {showPassportGuide ? (
           <>
-            <div className="absolute inset-3 rounded-2xl border border-dashed border-white/35" />
-            <div className="absolute inset-y-3 left-1/2 -translate-x-1/2 border-l border-dashed border-white/25" />
+            <div className="absolute inset-3 rounded-2xl border border-dashed border-slate-200" />
+            <div className="absolute inset-y-3 left-1/2 -translate-x-1/2 border-l border-dashed border-slate-200" />
             <div
               className="absolute inset-x-3 border-t border-dashed border-cyan-200/60"
               style={{ top: `${guideTopRatio * 100}%` }}
@@ -376,10 +376,10 @@ export default function ToolApp() {
               className="absolute inset-x-3 border-t border-dashed border-ocean/70"
               style={{ top: `${guideEyeLineRatio * 100}%` }}
             />
-            <div className="absolute inset-y-[8%] left-1/2 w-[56%] -translate-x-1/2 rounded-[36%] border border-white/25" />
+            <div className="absolute inset-y-[8%] left-1/2 w-[56%] -translate-x-1/2 rounded-[36%] border border-slate-200" />
           </>
         ) : (
-          <div className="absolute left-1/2 top-1/2 h-[70%] w-[55%] -translate-x-1/2 -translate-y-1/2 rounded-[45%] border border-dashed border-white/40" />
+          <div className="absolute left-1/2 top-1/2 h-[70%] w-[55%] -translate-x-1/2 -translate-y-1/2 rounded-[45%] border border-dashed border-slate-200" />
         )}
       </div>
       {inputUrl ? (
@@ -395,14 +395,14 @@ export default function ToolApp() {
               style={{ top: `${liveGuide.eyeLineRatio * 100}%` }}
             />
           </div>
-          <div className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+          <div className="absolute left-4 top-4 rounded-full bg-slate-900/5 px-3 py-1 text-xs text-slate-900">
             Align eyes to dashed line
           </div>
         </div>
       )}
       {cameraActive && autoCapture && holdStillActive && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="rounded-2xl border border-white/20 bg-black/60 px-4 py-2 text-sm text-white">
+          <div className="rounded-2xl border border-slate-200 bg-slate-900/5 px-4 py-2 text-sm text-slate-900">
             Hold still… {holdStillCountdown?.toFixed(1)}s
           </div>
         </div>
@@ -1296,24 +1296,24 @@ export default function ToolApp() {
       <div className="grid gap-4">
         <div
           className={cn(
-            "relative h-[320px] overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70 sm:h-[360px] lg:h-[400px]",
+            "relative h-[320px] overflow-hidden rounded-3xl border border-slate-200 bg-white sm:h-[360px] lg:h-[400px]",
             manualAdjust ? "cursor-move" : "cursor-default"
           )}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
         >
-          <div className="absolute right-3 top-3 z-10 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1 text-xs">
+          <div className="absolute right-3 top-3 z-10 flex items-center gap-2 rounded-full bg-slate-900/5 px-3 py-1 text-xs">
             {processing ? "Processing..." : progress}
           </div>
           {cameraActive && livePreview && (
-            <div className="absolute left-3 top-3 z-10 rounded-full bg-black/50 px-3 py-1 text-xs">
+            <div className="absolute left-3 top-3 z-10 rounded-full bg-slate-900/5 px-3 py-1 text-xs">
               Live {liveFps} fps
             </div>
           )}
           <div className="flex h-full w-full items-center justify-center p-3 sm:p-4">
             <div
-              className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/40"
+              className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100/40"
               style={previewFrameStyle}
             >
               {previewUrl || (cameraActive && livePreview) ? (
@@ -1337,8 +1337,8 @@ export default function ToolApp() {
                   )}
                   {showPassportGuide && (
                     <div className="pointer-events-none absolute inset-0">
-                      <div className="absolute inset-2 rounded-2xl border border-dashed border-white/35" />
-                      <div className="absolute inset-y-2 left-1/2 -translate-x-1/2 border-l border-dashed border-white/25" />
+                      <div className="absolute inset-2 rounded-2xl border border-dashed border-slate-200" />
+                      <div className="absolute inset-y-2 left-1/2 -translate-x-1/2 border-l border-dashed border-slate-200" />
                       <div
                         className="absolute inset-x-2 border-t border-dashed border-cyan-200/60"
                         style={{ top: `${guideTopRatio * 100}%` }}
@@ -1355,23 +1355,23 @@ export default function ToolApp() {
                         className="absolute inset-x-2 border-t border-dashed border-ocean/70"
                         style={{ top: `${guideEyeLineRatio * 100}%` }}
                       />
-                      <div className="absolute inset-y-[8%] left-1/2 w-[56%] -translate-x-1/2 rounded-[36%] border border-white/25" />
+                      <div className="absolute inset-y-[8%] left-1/2 w-[56%] -translate-x-1/2 rounded-[36%] border border-slate-200" />
                     </div>
                   )}
                 </>
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-slate-400">Output will appear here.</div>
+                <div className="flex h-full items-center justify-center text-sm text-slate-500">Output will appear here.</div>
               )}
             </div>
           </div>
           <div className="absolute bottom-3 left-3 flex flex-col gap-1">
-            <div className="rounded-full bg-black/50 px-3 py-1 text-[10px] text-white">
+            <div className="rounded-full bg-slate-900/5 px-3 py-1 text-[10px] text-slate-900">
               {`Live:${livePreview ? "on" : "off"} Cam:${cameraActive ? "on" : "off"} Models:${
                 modelStatus.ready ? "ready" : "loading"
               }`}
             </div>
             <div
-              className={`rounded-full px-3 py-1 text-[10px] text-white ${birefnetStatus.type === "ready" ? "bg-emerald-600/70" : birefnetStatus.type === "error" ? "bg-red-600/70" : birefnetStatus.type === "loading" ? "bg-amber-600/70" : "bg-black/50"}`}
+              className={`rounded-full px-3 py-1 text-[10px] text-slate-900 ${birefnetStatus.type === "ready" ? "bg-emerald-600/70" : birefnetStatus.type === "error" ? "bg-red-600/70" : birefnetStatus.type === "loading" ? "bg-amber-600/70" : "bg-slate-900/5"}`}
             >
               {birefnetStatus.type === "ready"
                 ? "BiRefNet: ready"
@@ -1384,10 +1384,10 @@ export default function ToolApp() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <div className="flex items-center justify-between text-sm text-slate-300">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <div className="flex items-center justify-between text-sm text-slate-600">
             <span>Before / After</span>
-            <span className="text-xs text-slate-400">{beforeAfterSplit}%</span>
+            <span className="text-xs text-slate-500">{beforeAfterSplit}%</span>
           </div>
           <Slider
             value={[beforeAfterSplit]}
@@ -1512,16 +1512,16 @@ export default function ToolApp() {
   };
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen text-slate-900">
       <div className="grid-glow min-h-screen">
         {!isAppShell && (
           <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8">
             <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Passport Photo Studio</p>
+              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Passport Photo Studio</p>
               <h1 className="font-display text-3xl font-semibold text-gradient">
                 Free Online Passport Photo Maker – Passport Photo Studio
               </h1>
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-slate-600">
                 {creatorProfile.tagline} Offline-capable, privacy-first, and tuned for official standards.
               </p>
             </div>
@@ -1541,10 +1541,10 @@ export default function ToolApp() {
         )}
         <div className="mx-auto max-w-6xl px-6 pb-6">
           <Stepper active={activeStep} maxStep={maxStep} onStepChange={setCurrentStep} />
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
             <div>
-              <span className="text-xs uppercase tracking-[0.35em] text-slate-400">Progress</span>
-              <p className="text-sm font-semibold text-white">{`Step ${activeStep} of ${maxStep} — ${stepTitle}`}</p>
+              <span className="text-xs uppercase tracking-[0.35em] text-slate-500">Progress</span>
+              <p className="text-sm font-semibold text-slate-900">{`Step ${activeStep} of ${maxStep} — ${stepTitle}`}</p>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -1566,10 +1566,10 @@ export default function ToolApp() {
         </div>
         {!onboardingDismissed && (
           <div className="mx-auto max-w-6xl px-6 pb-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Quick tip</p>
-                <p className="text-sm text-white">{tipsByStep[activeStep] ?? "Follow the steps to create your photo."}</p>
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Quick tip</p>
+                <p className="text-sm text-slate-900">{tipsByStep[activeStep] ?? "Follow the steps to create your photo."}</p>
               </div>
               <Button variant="ghost" onClick={() => setOnboardingDismissed(true)}>
                 Dismiss
@@ -1578,12 +1578,12 @@ export default function ToolApp() {
           </div>
         )}
         {!supportsCamera && (
-          <div className="mx-auto max-w-6xl px-6 pb-4 text-sm text-amber-200">
+          <div className="mx-auto max-w-6xl px-6 pb-4 text-sm text-amber-700">
             Camera access isn’t supported in this browser. Please upload a photo instead.
           </div>
         )}
         {!supportsWebgl && (
-          <div className="mx-auto max-w-6xl px-6 pb-4 text-sm text-amber-200">
+          <div className="mx-auto max-w-6xl px-6 pb-4 text-sm text-amber-700">
             WebGL is unavailable, so AI processing will use a slower CPU path.
           </div>
         )}
@@ -1622,7 +1622,7 @@ export default function ToolApp() {
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <label className="cursor-pointer rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm">
+                      <label className="cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-2 text-sm">
                         Upload image (up to 5)
                         <input type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
                       </label>
@@ -1654,13 +1654,13 @@ export default function ToolApp() {
                   <div className="grid gap-4">
                     {inputPreview}
                     {batchActive && (
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-white">Batch selection</p>
-                            <p className="text-xs text-slate-400">Pick the best photo to continue editing.</p>
+                            <p className="text-sm font-semibold text-slate-900">Batch selection</p>
+                            <p className="text-xs text-slate-500">Pick the best photo to continue editing.</p>
                           </div>
-                          <span className="text-xs text-slate-400">{batchItems.length} photos</span>
+                          <span className="text-xs text-slate-500">{batchItems.length} photos</span>
                         </div>
                         <div className="mt-3 grid gap-3 sm:grid-cols-3">
                           {batchItems.map((item) => (
@@ -1678,12 +1678,12 @@ export default function ToolApp() {
                               className={cn(
                                 "overflow-hidden rounded-2xl border text-left transition",
                                 selectedBatchId === item.id
-                                  ? "border-white"
-                                  : "border-white/15 hover:border-white/40"
+                                  ? "border-slate-200"
+                                  : "border-slate-200 hover:border-slate-200"
                               )}
                             >
                               <img src={item.url} alt={item.name} className="h-28 w-full object-cover" />
-                              <div className="px-3 py-2 text-xs text-slate-300">{item.name}</div>
+                              <div className="px-3 py-2 text-xs text-slate-600">{item.name}</div>
                             </button>
                           ))}
                         </div>
@@ -1707,27 +1707,27 @@ export default function ToolApp() {
                         </Button>
                       )}
                     </div>
-                    <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm">
                       <div>
-                        <p className="font-semibold text-white">Live AI preview</p>
-                        <p className="text-xs text-slate-400">Realtime background replacement + face guide.</p>
+                        <p className="font-semibold text-slate-900">Live AI preview</p>
+                        <p className="text-xs text-slate-500">Realtime background replacement + face guide.</p>
                       </div>
                       <Switch checked={livePreview} onCheckedChange={setLivePreview} />
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-white">Guided capture</p>
-                          <p className="text-xs text-slate-400">Auto-capture when quality is high and stable.</p>
+                          <p className="text-sm font-semibold text-slate-900">Guided capture</p>
+                          <p className="text-xs text-slate-500">Auto-capture when quality is high and stable.</p>
                         </div>
                         <Switch checked={autoCapture} onCheckedChange={setAutoCapture} />
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
                           Quality: {qualityScore}%
                         </span>
                         {autoCapture && cameraActive && !inputUrl && (
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
                             {holdStillActive ? `Hold still ${holdStillCountdown?.toFixed(1)}s` : "Waiting for steady frame"}
                           </span>
                         )}
@@ -1735,8 +1735,8 @@ export default function ToolApp() {
                     </div>
 
                     <div className="grid gap-3">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-400">Standard presets</p>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Standard presets</p>
                         <div className="mt-3 grid gap-3 sm:grid-cols-3">
                           {standardPresets.map((preset) => (
                             <button
@@ -1746,39 +1746,39 @@ export default function ToolApp() {
                               className={cn(
                                 "rounded-2xl border px-3 py-3 text-left text-sm transition",
                                 standardId === preset.id
-                                  ? "border-white bg-white/10 text-white"
-                                  : "border-white/15 bg-white/5 text-slate-300 hover:border-white/40"
+                                  ? "border-slate-200 bg-white text-slate-900"
+                                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-200"
                               )}
                             >
                               <p className="text-sm font-semibold">{preset.label}</p>
-                              <p className="text-xs text-slate-400">{preset.size}</p>
+                              <p className="text-xs text-slate-500">{preset.size}</p>
                             </button>
                           ))}
                         </div>
                         <div className="mt-4">
-                          <p className="text-xs uppercase tracking-wide text-slate-400">All standards</p>
+                          <p className="text-xs uppercase tracking-wide text-slate-500">All standards</p>
                           <select
                             value={standardId}
                             onChange={(event) => setStandardId(event.target.value as PassportStandard["id"])}
-                            className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                           >
                             {passportStandards.map((option) => (
-                              <option key={option.id} value={option.id} className="bg-slate-900">
+                              <option key={option.id} value={option.id} className="bg-slate-100">
                                 {option.label}
                               </option>
                             ))}
                           </select>
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-400">Quality</p>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Quality</p>
                         <select
                           value={qualityMode}
                           onChange={(event) => setQualityMode(event.target.value as QualityMode)}
-                          className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                         >
                           {Object.entries(qualityMap).map(([key, entry]) => (
-                            <option key={key} value={key} className="bg-slate-900">
+                            <option key={key} value={key} className="bg-slate-100">
                               {entry.label}
                             </option>
                           ))}
@@ -1786,28 +1786,28 @@ export default function ToolApp() {
                       </div>
                     </div>
                     {standardId === "custom" && (
-                      <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <p className="text-xs uppercase tracking-wide text-slate-400">Width (mm)</p>
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Width (mm)</p>
                             <input
                               type="number"
                               min={20}
                               max={100}
                               value={customWidth}
                               onChange={(event) => setCustomWidth(Number(event.target.value))}
-                              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                             />
                           </div>
                           <div>
-                            <p className="text-xs uppercase tracking-wide text-slate-400">Height (mm)</p>
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Height (mm)</p>
                             <input
                               type="number"
                               min={20}
                               max={120}
                               value={customHeight}
                               onChange={(event) => setCustomHeight(Number(event.target.value))}
-                              className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                             />
                           </div>
                         </div>
@@ -1830,7 +1830,7 @@ export default function ToolApp() {
                             Save size
                           </Button>
                           {savedProfiles.length > 0 && (
-                            <span className="text-xs text-slate-400">Saved profiles</span>
+                            <span className="text-xs text-slate-500">Saved profiles</span>
                           )}
                         </div>
                         {savedProfiles.length > 0 && (
@@ -1844,7 +1844,7 @@ export default function ToolApp() {
                                   setCustomWidth(profile.width);
                                   setCustomHeight(profile.height);
                                 }}
-                                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300 transition hover:border-white/40"
+                                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 transition hover:border-slate-200"
                               >
                                 {profile.label}
                               </button>
@@ -1855,20 +1855,20 @@ export default function ToolApp() {
                     )}
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-semibold">Auto-crop</p>
-                            <p className="text-xs text-slate-400">Uses face landmarks for alignment.</p>
+                            <p className="text-xs text-slate-500">Uses face landmarks for alignment.</p>
                           </div>
                           <Switch checked={autoCrop} onCheckedChange={setAutoCrop} />
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-semibold">Manual adjust</p>
-                            <p className="text-xs text-slate-400">Drag the preview to refine framing.</p>
+                            <p className="text-xs text-slate-500">Drag the preview to refine framing.</p>
                           </div>
                           <Switch checked={manualAdjust} onCheckedChange={setManualAdjust} />
                         </div>
@@ -1876,21 +1876,21 @@ export default function ToolApp() {
                     </div>
 
                     {manualAdjust && (
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="mb-3 flex items-center justify-between">
                           <p className="text-sm font-semibold">Framing controls</p>
                           {framingSavedAt ? (
                             <span className="text-xs text-emerald-300">Saved</span>
                           ) : (
-                            <span className="text-xs text-slate-400">Hold and drag bars</span>
+                            <span className="text-xs text-slate-500">Hold and drag bars</span>
                           )}
                         </div>
 
                         <div className="grid gap-4">
                           <div>
                             <div className="mb-1 flex items-center justify-between">
-                              <p className="text-xs text-slate-300">Horizontal position</p>
-                              <span className="text-xs text-slate-400">{`${Math.round(cropOffset.x * 100)}%`}</span>
+                              <p className="text-xs text-slate-600">Horizontal position</p>
+                              <span className="text-xs text-slate-500">{`${Math.round(cropOffset.x * 100)}%`}</span>
                             </div>
                             <Slider
                               value={[cropOffset.x]}
@@ -1906,8 +1906,8 @@ export default function ToolApp() {
 
                           <div>
                             <div className="mb-1 flex items-center justify-between">
-                              <p className="text-xs text-slate-300">Vertical position</p>
-                              <span className="text-xs text-slate-400">{`${Math.round(cropOffset.y * 100)}%`}</span>
+                              <p className="text-xs text-slate-600">Vertical position</p>
+                              <span className="text-xs text-slate-500">{`${Math.round(cropOffset.y * 100)}%`}</span>
                             </div>
                             <Slider
                               value={[cropOffset.y]}
@@ -1923,8 +1923,8 @@ export default function ToolApp() {
 
                           <div>
                             <div className="mb-1 flex items-center justify-between">
-                              <p className="text-xs text-slate-300">Zoom</p>
-                              <span className="text-xs text-slate-400">{`${Math.round(cropZoom * 100)}%`}</span>
+                              <p className="text-xs text-slate-600">Zoom</p>
+                              <span className="text-xs text-slate-500">{`${Math.round(cropZoom * 100)}%`}</span>
                             </div>
                             <Slider
                               value={[cropZoom]}
@@ -1985,7 +1985,7 @@ export default function ToolApp() {
 
                     {(displayWarnings.length > 0 || displayLightingWarnings.length > 0) && (
                       <div className="grid gap-2">
-                        <p className="text-xs uppercase tracking-wide text-slate-400">Warnings</p>
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Warnings</p>
                         {displayWarnings.map(warningCard)}
                         {displayLightingWarnings.map(warningCard)}
                       </div>
@@ -2021,8 +2021,8 @@ export default function ToolApp() {
                           className={cn(
                             "flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition",
                             background === option.value && !useCustomBg
-                              ? "border-white text-white"
-                              : "border-white/20 text-slate-300"
+                              ? "border-slate-200 text-slate-900"
+                              : "border-slate-200 text-slate-600"
                           )}
                           onClick={() => {
                             setBackground(option.value);
@@ -2031,7 +2031,7 @@ export default function ToolApp() {
                           type="button"
                         >
                           <span
-                            className="h-4 w-4 rounded-full border border-white/40"
+                            className="h-4 w-4 rounded-full border border-slate-200"
                             style={option.value === "transparent" ? transparentSwatch : { background: option.value }}
                           />
                           {option.label}
@@ -2040,13 +2040,13 @@ export default function ToolApp() {
                       <button
                         className={cn(
                           "flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition",
-                          useCustomBg ? "border-white text-white" : "border-white/20 text-slate-300"
+                          useCustomBg ? "border-slate-200 text-slate-900" : "border-slate-200 text-slate-600"
                         )}
                         onClick={() => setUseCustomBg(true)}
                         type="button"
                       >
                         <span
-                          className="h-4 w-4 rounded-full border border-white/40"
+                          className="h-4 w-4 rounded-full border border-slate-200"
                           style={{ background: customBackground }}
                         />
                         Custom
@@ -2058,9 +2058,9 @@ export default function ToolApp() {
                           type="color"
                           value={customBackground}
                           onChange={(event) => setCustomBackground(event.target.value)}
-                          className="h-10 w-12 rounded-xl border border-white/20 bg-transparent"
+                          className="h-10 w-12 rounded-xl border border-slate-200 bg-transparent"
                         />
-                        <span className="text-xs text-slate-300">Choose a compliant background color.</span>
+                        <span className="text-xs text-slate-600">Choose a compliant background color.</span>
                       </div>
                     )}
                   </div>
@@ -2098,13 +2098,13 @@ export default function ToolApp() {
                       </Button>
                     </div>
                     {edgeQuality && (
-                      <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
-                        <span className="font-semibold text-white">Edge Quality:</span>{" "}
+                      <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                        <span className="font-semibold text-slate-900">Edge Quality:</span>{" "}
                         <span>{`${edgeQuality.score}% • ${edgeQuality.label}`}</span>
                       </div>
                     )}
                     {autoEdgeParams && (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-500">
                         Auto suggestion: trim {autoEdgeParams.haloTrim}, tighten {autoEdgeParams.matteTighten}, feather{" "}
                         {autoEdgeParams.feather}.
                       </p>
@@ -2112,27 +2112,27 @@ export default function ToolApp() {
                     <Badge>Step 4</Badge>
                   </CardHeader>
                   <div className="grid gap-4">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Smart preset</p>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Smart preset</p>
                       <select
                         value={edgePreset}
                         onChange={(event) => setEdgePreset(event.target.value as "balanced" | "hair" | "clean")}
-                        className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                       >
                         {Object.entries(edgePresetConfig).map(([key, preset]) => (
-                          <option key={key} value={key} className="bg-slate-900">
+                          <option key={key} value={key} className="bg-slate-100">
                             {preset.label}
                           </option>
                         ))}
                       </select>
-                      <p className="mt-2 text-xs text-slate-400">Presets fine-tune halo cleanup and hair detail.</p>
+                      <p className="mt-2 text-xs text-slate-500">Presets fine-tune halo cleanup and hair detail.</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
                       <p className="text-sm font-semibold">Halo trim</p>
                       <Slider value={[haloTrim]} min={0} max={40} step={1} onValueChange={([val]) => setHaloTrim(val)} />
-                      <p className="mt-2 text-xs text-slate-400">Shrinks the matte to remove edge glow.</p>
+                      <p className="mt-2 text-xs text-slate-500">Shrinks the matte to remove edge glow.</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
                       <p className="text-sm font-semibold">Matte tighten</p>
                       <Slider
                         value={[matteTightness]}
@@ -2141,23 +2141,23 @@ export default function ToolApp() {
                         step={1}
                         onValueChange={([val]) => setMatteTightness(val)}
                       />
-                      <p className="mt-2 text-xs text-slate-400">Boosts alpha contrast for cleaner edges.</p>
+                      <p className="mt-2 text-xs text-slate-500">Boosts alpha contrast for cleaner edges.</p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-semibold">Edge refine</p>
-                            <p className="text-xs text-slate-400">Reduce hair halos with smoothing.</p>
+                            <p className="text-xs text-slate-500">Reduce hair halos with smoothing.</p>
                           </div>
                           <Switch checked={refineEdges} onCheckedChange={setRefineEdges} />
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <p className="text-sm font-semibold">Feather</p>
                         <Slider value={[feather]} min={0} max={20} step={1} onValueChange={([val]) => setFeather(val)} />
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <p className="text-sm font-semibold">Refine strength</p>
                         <Slider
                           value={[refineStrength]}
@@ -2167,7 +2167,7 @@ export default function ToolApp() {
                           onValueChange={([val]) => setRefineStrength(val)}
                         />
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <p className="text-sm font-semibold">Edge intensity</p>
                         <Slider
                           value={[edgeIntensity]}
@@ -2177,11 +2177,11 @@ export default function ToolApp() {
                           onValueChange={([val]) => setEdgeIntensity(val)}
                         />
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-semibold">Manual mask threshold</p>
-                            <p className="text-xs text-slate-400">Use when background removal misses the subject.</p>
+                            <p className="text-xs text-slate-500">Use when background removal misses the subject.</p>
                           </div>
                           <Switch checked={manualThreshold} onCheckedChange={setManualThreshold} />
                         </div>
@@ -2194,7 +2194,7 @@ export default function ToolApp() {
                               step={0.01}
                               onValueChange={([val]) => setMaskThreshold(val)}
                             />
-                            <p className="mt-2 text-xs text-slate-400">Threshold: {maskThreshold.toFixed(2)}</p>
+                            <p className="mt-2 text-xs text-slate-500">Threshold: {maskThreshold.toFixed(2)}</p>
                           </div>
                         )}
                       </div>
@@ -2223,16 +2223,16 @@ export default function ToolApp() {
                     <Badge>Step 5</Badge>
                   </CardHeader>
                   <div className="grid gap-4">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-semibold">Auto retouch</p>
-                          <p className="text-xs text-slate-400">Balances lighting and contrast automatically.</p>
+                          <p className="text-xs text-slate-500">Balances lighting and contrast automatically.</p>
                         </div>
                         <Switch checked={autoRetouch} onCheckedChange={setAutoRetouch} />
                       </div>
                       <div className="mt-3">
-                        <div className="flex items-center justify-between text-xs text-slate-400">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
                           <span>Strength</span>
                           <span>{retouchStrength.toFixed(1)}x</span>
                         </div>
@@ -2245,8 +2245,8 @@ export default function ToolApp() {
                         />
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Preset</p>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Preset</p>
                       <select
                         value={filterPreset}
                         onChange={(event) => {
@@ -2258,23 +2258,23 @@ export default function ToolApp() {
                           setSaturation(preset.saturation);
                           setHue(preset.hue);
                         }}
-                        className="mt-2 w-full rounded-2xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-white"
+                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                       >
                         {Object.entries(filterPresets).map(([key, preset]) => (
-                          <option key={key} value={key} className="bg-slate-900">
+                          <option key={key} value={key} className="bg-slate-100">
                             {preset.label}
                           </option>
                         ))}
-                        <option value="custom" className="bg-slate-900">
+                        <option value="custom" className="bg-slate-100">
                           Custom
                         </option>
                       </select>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold">Brightness</p>
-                          <span className="text-xs text-slate-400">{brightness}%</span>
+                          <span className="text-xs text-slate-500">{brightness}%</span>
                         </div>
                         <Slider
                           value={[brightness]}
@@ -2287,10 +2287,10 @@ export default function ToolApp() {
                           }}
                         />
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold">Contrast</p>
-                          <span className="text-xs text-slate-400">{contrast}%</span>
+                          <span className="text-xs text-slate-500">{contrast}%</span>
                         </div>
                         <Slider
                           value={[contrast]}
@@ -2303,10 +2303,10 @@ export default function ToolApp() {
                           }}
                         />
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold">Saturation</p>
-                          <span className="text-xs text-slate-400">{saturation}%</span>
+                          <span className="text-xs text-slate-500">{saturation}%</span>
                         </div>
                         <Slider
                           value={[saturation]}
@@ -2319,10 +2319,10 @@ export default function ToolApp() {
                           }}
                         />
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold">Hue</p>
-                          <span className="text-xs text-slate-400">{hue}°</span>
+                          <span className="text-xs text-slate-500">{hue}°</span>
                         </div>
                         <Slider
                           value={[hue]}
@@ -2396,13 +2396,13 @@ export default function ToolApp() {
                     </div>
 
                     {shareLink && (
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
                         Share link: <a className="text-ocean" href={shareLink}>{shareLink}</a>
                       </div>
                     )}
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Print pack</p>
-                      <div className="mt-2 grid gap-2 text-xs text-slate-300">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Print pack</p>
+                      <div className="mt-2 grid gap-2 text-xs text-slate-600">
                         <div className="flex items-center justify-between">
                           <span>Passport size</span>
                           <span>{`${expectedWidthPx} x ${expectedHeightPx} px @ ${qualityMap[qualityMode].ppi} DPI`}</span>
@@ -2413,8 +2413,8 @@ export default function ToolApp() {
                         </div>
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Compliance checklist</p>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Compliance checklist</p>
                       <div className="mt-2 grid gap-2">
                         {[
                           { id: "tilt", label: "Head level" },
@@ -2459,11 +2459,11 @@ export default function ToolApp() {
                 </div>
               </CardHeader>
               <div className="grid gap-4">
-                <div className="flex items-center justify-between text-sm text-slate-300">
+                <div className="flex items-center justify-between text-sm text-slate-600">
                   <span>Overall score</span>
-                  <span className="text-white">{qualityScore}%</span>
+                  <span className="text-slate-900">{qualityScore}%</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-white">
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
@@ -2472,12 +2472,12 @@ export default function ToolApp() {
                     style={{ width: `${qualityScore}%` }}
                   />
                 </div>
-                <div className="grid gap-2 text-xs text-slate-300">
+                <div className="grid gap-2 text-xs text-slate-600">
                   {(qualityTips.length > 0
                     ? qualityTips
                     : ["Looks good. You can proceed to export when ready."]
                   ).map((tip) => (
-                    <div key={tip} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                    <div key={tip} className="rounded-2xl border border-slate-200 bg-white px-3 py-2">
                       {tip}
                     </div>
                   ))}
@@ -2493,12 +2493,12 @@ export default function ToolApp() {
                   </CardDescription>
                 </div>
               </CardHeader>
-              <div className="grid gap-3 text-sm text-slate-300">
+              <div className="grid gap-3 text-sm text-slate-600">
                 {passportReport ? (
                   <>
-                    <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs">
+                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs">
                       <span>AI compliance score</span>
-                      <span className="font-semibold text-white">{passportReport.score}%</span>
+                      <span className="font-semibold text-slate-900">{passportReport.score}%</span>
                     </div>
                     <div className="grid gap-2">
                       {passportReport.items.map((item) => (
@@ -2510,11 +2510,11 @@ export default function ToolApp() {
                               ? "border-emerald-300/30 bg-emerald-300/10"
                               : item.status === "warn"
                                 ? "border-gold/30 bg-gold/10"
-                                : "border-white/10 bg-white/5"
+                                : "border-slate-200 bg-white"
                           )}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-white">{item.label}</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-900">{item.label}</p>
                             <span
                               className={cn(
                                 "text-[10px] font-semibold uppercase tracking-wide",
@@ -2522,30 +2522,30 @@ export default function ToolApp() {
                                   ? "text-emerald-200"
                                   : item.status === "warn"
                                     ? "text-gold"
-                                    : "text-slate-300"
+                                    : "text-slate-600"
                               )}
                             >
                               {item.status === "manual" ? "Manual" : item.status === "pass" ? "Pass" : "Review"}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-slate-300">{item.detail}</p>
+                          <p className="mt-1 text-xs text-slate-600">{item.detail}</p>
                         </div>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div className="grid gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs text-slate-300">
+                  <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-3">
+                    <p className="text-xs text-slate-600">
                       Upload or capture a photo to run AI requirement checks automatically.
                     </p>
-                    <div className="grid gap-1 text-xs text-slate-400">
+                    <div className="grid gap-1 text-xs text-slate-500">
                       {defaultRequirementChecklist.map((item) => (
                         <p key={item}>- {item}</p>
                       ))}
                     </div>
                   </div>
                 )}
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   Material and religious-exception checks require manual confirmation before submission.
                 </p>
               </div>
@@ -2558,7 +2558,7 @@ export default function ToolApp() {
                     <CardDescription>Offline assets and delegate selection.</CardDescription>
                   </div>
                 </CardHeader>
-                <div className="grid gap-3 text-sm text-slate-300">
+                <div className="grid gap-3 text-sm text-slate-600">
                   <div className="flex items-center justify-between">
                     <span>Runtime</span>
                     <span>{modelStatus.loading ? "Loading..." : modelStatus.ready ? "Ready" : "Unavailable"}</span>
@@ -2601,56 +2601,56 @@ export default function ToolApp() {
           </motion.section>
         </main>
         {!isAppShell && (
-          <section className="mx-auto w-full max-w-6xl px-6 pb-10 text-slate-200">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8">
-            <p className="text-sm text-slate-300">
+          <section className="mx-auto w-full max-w-6xl px-6 pb-10 text-slate-800">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
+            <p className="text-sm text-slate-600">
               Passport Photo Studio is a free tool to create passport-size photos at home. Upload your photo, align and
               crop to the right size, and download instantly with no signup required.
             </p>
 
             <div className="mt-6 grid gap-6">
               <div>
-                <h2 className="text-lg font-semibold text-white">How It Works</h2>
-                <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-300">
+                <h2 className="text-lg font-semibold text-slate-900">How It Works</h2>
+                <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
                   <li>Capture from your camera or upload a photo.</li>
                   <li>Remove the background and align the face guide.</li>
                   <li>Crop to official passport sizes and export.</li>
                 </ol>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">Supported Passport Photo Sizes</h2>
-                <p className="mt-2 text-sm text-slate-300">
+                <h2 className="text-lg font-semibold text-slate-900">Supported Passport Photo Sizes</h2>
+                <p className="mt-2 text-sm text-slate-600">
                   Generate photos for US passports (2x2 inches) and India passport size (35x45 mm), with flexible ratios
                   for other countries.
                 </p>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">Why Use Passport Photo Studio</h2>
-                <p className="mt-2 text-sm text-slate-300">
+                <h2 className="text-lg font-semibold text-slate-900">Why Use Passport Photo Studio</h2>
+                <p className="mt-2 text-sm text-slate-600">
                   Privacy-friendly processing keeps your images in the browser, no account needed, and the tool works on
                   both mobile and desktop.
                 </p>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">Take Passport Photo at Home</h2>
-                <p className="mt-2 text-sm text-slate-300">
+                <h2 className="text-lg font-semibold text-slate-900">Take Passport Photo at Home</h2>
+                <p className="mt-2 text-sm text-slate-600">
                   Stand in front of even lighting, keep your head straight, and use the face guide to align your eyes
                   before capturing.
                 </p>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">FAQ</h2>
-                <div className="mt-2 space-y-3 text-sm text-slate-300">
+                <h2 className="text-lg font-semibold text-slate-900">FAQ</h2>
+                <div className="mt-2 space-y-3 text-sm text-slate-600">
                   <div>
-                    <p className="font-semibold text-white">Is it free?</p>
+                    <p className="font-semibold text-slate-900">Is it free?</p>
                     <p>Yes. You can create passport photos online for free without signing up.</p>
                   </div>
                   <div>
-                    <p className="font-semibold text-white">Are my photos stored on servers?</p>
+                    <p className="font-semibold text-slate-900">Are my photos stored on servers?</p>
                     <p>Your photos stay in your browser unless you choose to share or export via the optional server.</p>
                   </div>
                   <div>
-                    <p className="font-semibold text-white">Will this be accepted for official submissions?</p>
+                    <p className="font-semibold text-slate-900">Will this be accepted for official submissions?</p>
                     <p>We provide guidance and sizing tools, but always verify local submission requirements.</p>
                   </div>
                 </div>
@@ -2675,22 +2675,22 @@ export default function ToolApp() {
           </div>
         )}
         {!isAppShell && (
-          <footer className="mt-10 border-t border-white/10 bg-slate-950/40">
+          <footer className="mt-10 border-t border-slate-200 bg-white">
           <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Contact</p>
-              <p className="text-sm font-semibold text-white">{creatorProfile.name}</p>
-              <p className="text-xs text-slate-400">{creatorProfile.tagline}</p>
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Contact</p>
+              <p className="text-sm font-semibold text-slate-900">{creatorProfile.name}</p>
+              <p className="text-xs text-slate-500">{creatorProfile.tagline}</p>
             </div>
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-slate-500">
               Build: {buildStamp}
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
               <button
                 type="button"
                 aria-expanded={showPrivacy}
                 onClick={() => setShowPrivacy((prev) => !prev)}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 transition hover:border-slate-200 hover:text-slate-900"
               >
                 Privacy Policy
               </button>
@@ -2698,7 +2698,7 @@ export default function ToolApp() {
                 type="button"
                 aria-expanded={showTerms}
                 onClick={() => setShowTerms((prev) => !prev)}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 transition hover:border-slate-200 hover:text-slate-900"
               >
                 Terms & Conditions
               </button>
@@ -2706,7 +2706,7 @@ export default function ToolApp() {
                 type="button"
                 aria-expanded={showAdSense}
                 onClick={() => setShowAdSense((prev) => !prev)}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 transition hover:border-slate-200 hover:text-slate-900"
               >
                 AdSense Guide
               </button>
@@ -2714,7 +2714,7 @@ export default function ToolApp() {
                 href={creatorProfile.linkedin}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 transition hover:border-slate-200 hover:text-slate-900"
               >
                 LinkedIn
               </a>
@@ -2722,13 +2722,13 @@ export default function ToolApp() {
                 href={creatorProfile.github}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 transition hover:border-slate-200 hover:text-slate-900"
               >
                 GitHub
               </a>
               <a
                 href={`mailto:${creatorProfile.email}`}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 transition hover:border-white/30 hover:text-white"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 transition hover:border-slate-200 hover:text-slate-900"
               >
                 {creatorProfile.email}
               </a>
@@ -2736,8 +2736,8 @@ export default function ToolApp() {
           </div>
           <div className="mx-auto w-full max-w-6xl px-6 pb-6">
             {showPrivacy && (
-              <div id="privacy" className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
-                <p className="text-sm font-semibold text-white">Privacy Policy</p>
+              <div id="privacy" className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600">
+                <p className="text-sm font-semibold text-slate-900">Privacy Policy</p>
                 <p className="mt-2">
                   We process photos locally in your browser. We do not upload your images unless you explicitly use the share
                   feature. We store export history only when the optional server is enabled.
@@ -2745,8 +2745,8 @@ export default function ToolApp() {
               </div>
             )}
             {showTerms && (
-              <div id="terms" className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
-                <p className="text-sm font-semibold text-white">Terms & Conditions</p>
+              <div id="terms" className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600">
+                <p className="text-sm font-semibold text-slate-900">Terms & Conditions</p>
                 <p className="mt-2">
                   This tool provides guidance for passport photos, but you are responsible for final compliance with local
                   regulations. Use at your own discretion.
@@ -2754,49 +2754,49 @@ export default function ToolApp() {
               </div>
             )}
             {showAdSense && (
-              <div id="adsense" className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
-                <p className="text-sm font-semibold text-white">AdSense Approval Guide</p>
+              <div id="adsense" className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600">
+                <p className="text-sm font-semibold text-slate-900">AdSense Approval Guide</p>
                 <div className="mt-2 space-y-3">
                   <div>
-                    <p className="text-xs font-semibold text-white">Clicks and impressions</p>
+                    <p className="text-xs font-semibold text-slate-900">Clicks and impressions</p>
                     <p>
                       Avoid clicking your own ads or encouraging others to. Use Google Analytics to understand your traffic.
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Content guidelines</p>
+                    <p className="text-xs font-semibold text-slate-900">Content guidelines</p>
                     <p>
                       You are responsible for all site content displayed alongside ads. Ensure it is original, relevant, and
                       valuable to users, and avoid restricted content such as adult material, violence, or hate speech.
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Ad implementation</p>
+                    <p className="text-xs font-semibold text-slate-900">Ad implementation</p>
                     <p>
                       Do not alter AdSense code, use pop-ups, or mimic Google branding without permission.
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Account health</p>
+                    <p className="text-xs font-semibold text-slate-900">Account health</p>
                     <p>
                       Keep contact information current and promptly address any policy issues or requests from AdSense.
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Content quality checklist</p>
+                    <p className="text-xs font-semibold text-slate-900">Content quality checklist</p>
                     <p>
                       Ensure content is original, high-quality, and relevant to your audience. Include clear About and Contact
                       sections to build transparency and trust.
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Site optimization</p>
+                    <p className="text-xs font-semibold text-slate-900">Site optimization</p>
                     <p>
                       Keep navigation clear, load quickly on desktop and mobile, and implement basic SEO to attract visitors.
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">Show commitment</p>
+                    <p className="text-xs font-semibold text-slate-900">Show commitment</p>
                     <p>
                       Publish diverse, engaging content and update the site consistently with fresh posts or improvements.
                     </p>

@@ -10,8 +10,8 @@ const FaqPage = lazy(() => import("./pages/FaqPage"));
 const Login = lazy(() => import("./pages/Login"));
 
 const RouteFallback = () => (
-  <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
-    <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm backdrop-blur">
+  <div className="flex min-h-screen items-center justify-center bg-white text-slate-800">
+    <div className="rounded-3xl border border-slate-200 bg-white px-6 py-4 text-sm backdrop-blur">
       Loading experience...
     </div>
   </div>

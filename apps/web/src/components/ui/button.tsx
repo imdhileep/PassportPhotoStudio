@@ -3,25 +3,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0b14] disabled:opacity-40 disabled:pointer-events-none select-none",
+  "inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-40 disabled:pointer-events-none select-none",
   {
     variants: {
       variant: {
-        /* Primary: amber/gold gradient with glow (LeepCast brand) */
+        /* Primary: solid amber CTA */
         default:
-          "bg-gradient-to-r from-amber-500 to-amber-400 text-night shadow-[0_0_16px_rgba(245,158,11,0.35)] hover:from-amber-400 hover:to-yellow-300 hover:shadow-[0_0_22px_rgba(245,158,11,0.5)] active:scale-[0.97]",
-        /* Accent: amber gradient for CTAs */
+          "bg-amber-500 text-white shadow-sm hover:bg-amber-600 active:scale-[0.98]",
+        /* Accent: same amber CTA */
         accent:
-          "bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-[0_0_14px_rgba(245,158,11,0.3)] hover:from-amber-500 hover:to-yellow-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.45)] active:scale-[0.97]",
-        /* Ghost: transparent with subtle hover */
+          "bg-amber-500 text-white shadow-sm hover:bg-amber-600 active:scale-[0.98]",
+        /* Ghost: transparent with subtle neutral hover */
         ghost:
-          "text-slate-300 hover:bg-indigo-500/10 hover:text-indigo-300 active:scale-[0.97]",
-        /* Outline: indigo-tinted border */
+          "text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98]",
+        /* Outline: neutral light border */
         outline:
-          "border border-indigo-500/25 bg-indigo-500/5 text-slate-200 hover:border-indigo-400/50 hover:bg-indigo-500/12 hover:text-white active:scale-[0.97]",
+          "border border-slate-300 bg-white text-slate-800 hover:border-slate-400 hover:bg-slate-50 active:scale-[0.98]",
         /* Destructive */
         destructive:
-          "bg-red-600/90 text-white hover:bg-red-500 active:scale-[0.97]"
+          "bg-red-600 text-white hover:bg-red-500 active:scale-[0.98]"
       },
       size: {
         sm: "h-8 px-3.5 text-xs",

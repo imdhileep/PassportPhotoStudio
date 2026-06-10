@@ -26,11 +26,11 @@ export default function HowItWorks() {
         const Icon = step.icon;
         return (
           <Card key={step.title} className="glass">
-            <div className="space-y-3 p-5 text-sm text-slate-300">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white">
+            <div className="space-y-3 p-5 text-sm text-slate-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-900">
                 <Icon className="h-5 w-5" />
               </div>
-              <p className="text-base font-semibold text-white">{step.title}</p>
+              <p className="text-base font-semibold text-slate-900">{step.title}</p>
               <p>{step.detail}</p>
             </div>
           </Card>
