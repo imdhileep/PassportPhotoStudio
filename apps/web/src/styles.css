@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -8,20 +8,20 @@
 :root {
   color-scheme: dark;
 
-  /* Backgrounds */
-  --bg-0: #07070f;
-  --bg-1: #0d0d1a;
-  --bg-2: #121226;
+  /* Backgrounds — LeepCast near-black ink */
+  --bg-0: #0a0b14;
+  --bg-1: #12131f;
+  --bg-2: #181a26;
 
   /* Card surface */
-  --card: rgba(14, 14, 28, 0.92);
-  --card-border: rgba(99, 102, 241, 0.18);
+  --card: rgba(18, 19, 31, 0.92);
+  --card-border: rgba(245, 158, 11, 0.18);
 
-  /* Brand */
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
-  --primary-light: #818cf8;
-  --primary-glow: rgba(99, 102, 241, 0.22);
+  /* Brand — amber/gold (LeepCast) */
+  --primary: #f59e0b;
+  --primary-dark: #d97706;
+  --primary-light: #fbbf24;
+  --primary-glow: rgba(245, 158, 11, 0.22);
 
   /* Accent (amber CTA) */
   --accent: #f59e0b;
@@ -38,7 +38,7 @@
   --text-muted: #475569;
 
   /* Glow (used by .glass and body) */
-  --glow: rgba(99, 102, 241, 0.22);
+  --glow: rgba(245, 158, 11, 0.22);
 }
 
 [data-theme="light"] {
@@ -47,12 +47,12 @@
   --bg-1: #eeeef8;
   --bg-2: #ffffff;
   --card: rgba(255, 255, 255, 0.92);
-  --card-border: rgba(99, 102, 241, 0.22);
-  --primary: #4f46e5;
-  --primary-dark: #3730a3;
-  --primary-light: #6366f1;
-  --primary-glow: rgba(79, 70, 229, 0.16);
-  --glow: rgba(79, 70, 229, 0.14);
+  --card-border: rgba(245, 158, 11, 0.22);
+  --primary: #d97706;
+  --primary-dark: #b45309;
+  --primary-light: #f59e0b;
+  --primary-glow: rgba(217, 119, 6, 0.16);
+  --glow: rgba(217, 119, 6, 0.14);
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
@@ -60,7 +60,7 @@
 
 /* ─── Base ───────────────────────────────────────────────────────── */
 body {
-  font-family: "Inter", "Space Grotesk", ui-sans-serif, system-ui;
+  font-family: "Geist", ui-sans-serif, system-ui;
   color: var(--text-primary);
   min-height: 100vh;
   text-rendering: optimizeLegibility;
@@ -69,11 +69,11 @@ body {
   background-color: var(--bg-0);
   background-image:
     /* top indigo bloom */
-    radial-gradient(ellipse 100% 55% at 50% -5%, rgba(99, 102, 241, 0.14) 0%, transparent 70%),
+    radial-gradient(ellipse 100% 55% at 50% -5%, rgba(245, 158, 11, 0.14) 0%, transparent 70%),
     /* right violet accent */
-    radial-gradient(ellipse 60% 40% at 90% 5%, rgba(139, 92, 246, 0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 5%, rgba(217, 119, 6, 0.09) 0%, transparent 60%),
     /* bottom-left subtle warmth */
-    radial-gradient(ellipse 50% 30% at 5% 95%, rgba(99, 102, 241, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 5% 95%, rgba(245, 158, 11, 0.07) 0%, transparent 60%),
     /* fine diagonal grain */
     repeating-linear-gradient(
       135deg,
@@ -88,13 +88,13 @@ body {
   color: var(--text-primary);
   background-color: var(--bg-0);
   background-image:
-    radial-gradient(ellipse 100% 55% at 50% -5%, rgba(99, 102, 241, 0.1) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 40% at 90% 5%, rgba(139, 92, 246, 0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 100% 55% at 50% -5%, rgba(245, 158, 11, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 5%, rgba(217, 119, 6, 0.06) 0%, transparent 60%);
 }
 
 h1, h2, h3, .font-display {
-  font-family: "Space Grotesk", "Inter", ui-sans-serif, system-ui;
-  letter-spacing: -0.01em;
+  font-family: "Geist", ui-sans-serif, system-ui;
+  letter-spacing: -0.02em;
 }
 
 /* ─── Shared surface ─────────────────────────────────────────────── */
@@ -108,24 +108,24 @@ h1, h2, h3, .font-display {
   border: 1px solid var(--card-border);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.5),
-    0 1px 0 0 rgba(99, 102, 241, 0.1) inset,
+    0 1px 0 0 rgba(245, 158, 11, 0.1) inset,
     0 24px 64px rgba(0, 0, 0, 0.55),
     0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="light"] .glass {
   background: linear-gradient(155deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 255, 0.9) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.2);
   box-shadow:
     0 1px 0 0 rgba(255, 255, 255, 0.8) inset,
-    0 8px 32px rgba(99, 102, 241, 0.08),
+    0 8px 32px rgba(245, 158, 11, 0.08),
     0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 /* ─── Grid / dot pattern background ─────────────────────────────── */
 .grid-glow {
   background-image:
-    radial-gradient(rgba(99, 102, 241, 0.12) 1px, transparent 1px),
+    radial-gradient(rgba(245, 158, 11, 0.12) 1px, transparent 1px),
     linear-gradient(180deg, var(--bg-0) 0%, var(--bg-0) 100%);
   background-size: 28px 28px, cover;
 }
@@ -134,9 +134,9 @@ h1, h2, h3, .font-display {
 .text-gradient {
   background: linear-gradient(
     92deg,
-    var(--primary-light) 0%,
-    #a78bfa 40%,
-    var(--accent-light) 80%
+    #fde047 0%,
+    #facc15 50%,
+    #f59e0b 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -144,7 +144,7 @@ h1, h2, h3, .font-display {
 }
 
 [data-theme="light"] .text-gradient {
-  background: linear-gradient(92deg, var(--primary-dark) 0%, #6366f1 55%, var(--accent) 100%);
+  background: linear-gradient(92deg, #d97706 0%, #f59e0b 55%, #b45309 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -152,14 +152,14 @@ h1, h2, h3, .font-display {
 
 /* ─── Glow ring on focused/active inputs ────────────────────────── */
 .ring-brand {
-  --tw-ring-color: rgba(99, 102, 241, 0.5);
+  --tw-ring-color: rgba(245, 158, 11, 0.5);
   box-shadow: 0 0 0 3px var(--tw-ring-color);
 }
 
 /* ─── Gradient border utility ────────────────────────────────────── */
 .border-gradient {
   border: 1px solid;
-  border-image: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.1)) 1;
+  border-image: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.2), rgba(245, 158, 11, 0.1)) 1;
   border-radius: 0; /* border-image doesn't support border-radius; use outline trick instead */
 }
 
@@ -174,9 +174,9 @@ h1, h2, h3, .font-display {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  background: rgba(99, 102, 241, 0.1);
-  color: #a5b4fc;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.1);
+  color: #fcd34d;
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────── */
@@ -188,9 +188,9 @@ h1, h2, h3, .font-display {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(245, 158, 11, 0.3);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.5);
+  background: rgba(245, 158, 11, 0.5);
 }
