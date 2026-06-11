@@ -84,7 +84,7 @@ export default function Landing() {
       <Navbar />
       <Hero />
 
-      <Section id="upload" eyebrow="Upload" title="Instant passport photo generator">
+      <Section id="upload" eyebrow="Get started" title="Take or upload your photo">
         <UploadCard onGenerate={handleGenerate} />
       </Section>
 
