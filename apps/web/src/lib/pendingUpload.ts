@@ -87,11 +87,13 @@ export const savePendingUpload = async (dataUrl: string, name?: string) => {
   return { id, name: record.name };
 };
 
+// NOTE: this reads but does NOT delete the record. Deleting on read makes the load non-idempotent,
+// which breaks under React StrictMode's double-invoke (the first run deletes the record, the second
+// finds nothing and no image loads). Old records are cleaned up by pruneOld() on the next save.
 export const loadPendingUpload = async (id: string) =>
-  withStore("readwrite", async (store) => {
+  withStore("readonly", async (store) => {
     const record = (await requestAsPromise(store.get(id))) as PendingUploadRecord | undefined;
     if (!record) return null;
-    store.delete(id);
     return {
       id: record.id,
       name: record.name,
