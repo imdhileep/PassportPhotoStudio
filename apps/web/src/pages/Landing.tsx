@@ -7,7 +7,6 @@ import Faq from "@/components/marketing/Faq";
 import Footer from "@/components/marketing/Footer";
 import { Section } from "@/components/marketing/Section";
 import { Card } from "@/components/ui";
-import Examples from "@/components/marketing/Examples";
 import { appConfig } from "@/config";
 import { savePendingUpload } from "@/lib/pendingUpload";
 
@@ -86,10 +85,6 @@ export default function Landing() {
 
       <Section id="upload" eyebrow="Get started" title="Take or upload your photo">
         <UploadCard onGenerate={handleGenerate} />
-      </Section>
-
-      <Section id="examples" eyebrow="Examples" title="Before / after results">
-        <Examples />
       </Section>
 
       <Section
