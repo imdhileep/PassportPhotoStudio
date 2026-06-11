@@ -2,9 +2,7 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/marketing/Navbar";
 import Hero from "@/components/marketing/Hero";
 import UploadCard from "@/components/marketing/UploadCard";
-import SocialProof from "@/components/marketing/SocialProof";
 import HowItWorks from "@/components/marketing/HowItWorks";
-import Pricing from "@/components/marketing/Pricing";
 import Faq from "@/components/marketing/Faq";
 import Footer from "@/components/marketing/Footer";
 import { Section } from "@/components/marketing/Section";
@@ -114,30 +112,8 @@ export default function Landing() {
         </div>
       </Section>
 
-      <Section eyebrow="Trusted" title="Loved by busy travelers">
-        <SocialProof />
-      </Section>
-
       <Section id="how" eyebrow="How it works" title="Get ready in three steps">
         <HowItWorks />
-      </Section>
-
-      <Section
-        eyebrow="Supported countries"
-        title="US, India, and more presets"
-        description="We include popular passport sizes plus custom profiles. For any country not listed, you can enter the exact dimensions."
-      >
-        <div className="grid gap-4 text-sm text-slate-600">
-          <p>
-            Current presets include United States (2x2 in), India (35x45 mm), Canada (50x70 mm), UK (35x45 mm), EU
-            standards, and Australia (35x45 mm). If your authority requests a unique size, switch to Custom and save the
-            profile for repeat use.
-          </p>
-          <p>
-            Review the FAQ for common size questions and printing tips. If you are unsure, compare the requirements on
-            your government’s official site and select the closest match in the tool.
-          </p>
-        </div>
       </Section>
 
       <Section id="countries" eyebrow="Countries" title="Global sizing presets">
@@ -173,10 +149,6 @@ export default function Landing() {
         </div>
       </Section>
 
-      <Section id="pricing" eyebrow="Pricing" title="Choose your plan">
-        <Pricing />
-      </Section>
-
       <Section
         id="faq"
         eyebrow="FAQ"
@@ -184,32 +156,6 @@ export default function Landing() {
         description="Here are the most common questions about passport photo compliance, printing, and acceptance."
       >
         <Faq />
-        <div className="mt-6 grid gap-3 text-sm text-slate-600">
-          <p>
-            <strong>Can I submit a digital photo?</strong> Most online applications accept a digital file as long as the
-            size and background match their rules.
-          </p>
-          <p>
-            <strong>How do I print?</strong> Use the 4x6 print sheet and print at 100% scale with no resizing enabled.
-          </p>
-          <p>
-            <strong>Does the tool work on mobile?</strong> Yes, the layout and camera flow are optimized for phones and
-            tablets.
-          </p>
-        </div>
-      </Section>
-
-      <Section eyebrow="Integration" title="How to integrate with processing API later">
-        <Card className="glass">
-          <div className="space-y-2 p-5 text-sm text-slate-600">
-            <p className="text-slate-900">TODO hooks</p>
-            <ul className="list-disc space-y-1 pl-5">
-              <li>Swap the upload handler to POST to your processing API.</li>
-              <li>Stream progress updates into the /app shell preview panel.</li>
-              <li>Return processed image URLs and pipe them into downloads.</li>
-            </ul>
-          </div>
-        </Card>
       </Section>
 
       <motion.div
