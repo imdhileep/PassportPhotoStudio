@@ -18,9 +18,6 @@ export default function Navbar() {
           <a href="/about" className="transition hover:text-slate-900">
             About
           </a>
-          <a href="/#pricing" className="transition hover:text-slate-900">
-            Pricing
-          </a>
           <a href="/#countries" className="transition hover:text-slate-900">
             Countries
           </a>
