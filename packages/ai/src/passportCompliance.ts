@@ -160,6 +160,7 @@ export type PassportCheckInput = {
   contrast: number;
   saturation: number;
   hue: number;
+  babyMode?: boolean;
 };
 
 const yesNo = (status: boolean): CheckStatus => (status ? "pass" : "warn");
@@ -177,6 +178,10 @@ export const evaluatePassportRequirements = (input: PassportCheckInput): Passpor
     saturation,
     hue
   } = input;
+  // Infant mode: most authorities relax the rules for babies — eyes may be closed, no neutral
+  // expression is required, and head-size / centering tolerances are widened. We relax the affected
+  // checks rather than hide them, so the user still sees what was eased.
+  const babyMode = input.babyMode ?? false;
 
   const items: RequirementItem[] = [];
 
@@ -207,8 +212,12 @@ export const evaluatePassportRequirements = (input: PassportCheckInput): Passpor
 
   // Head height as a fraction of the photo height, using the same per-country framing range the
   // crop targets (US uses the documented 25-35 mm of a 51 mm photo; others use headRatioRange).
-  const [headMinRatio, headMaxRatio] =
+  let [headMinRatio, headMaxRatio] =
     standard.id === "us" ? [HEAD_HEIGHT_MIN_RATIO, HEAD_HEIGHT_MAX_RATIO] : standard.headRatioRange;
+  if (babyMode) {
+    headMinRatio = Math.max(0.2, headMinRatio - 0.15);
+    headMaxRatio = Math.min(0.95, headMaxRatio + 0.15);
+  }
   const headPct = (ratio: number) => `${Math.round(ratio * 100)}%`;
   let headSizeStatus: CheckStatus = "manual";
   let headSizeDetail = "Face landmarks required.";
@@ -235,7 +244,7 @@ export const evaluatePassportRequirements = (input: PassportCheckInput): Passpor
   }
   items.push({
     id: "head_size",
-    label: `Head height ${headPct(headMinRatio)}-${headPct(headMaxRatio)} of frame`,
+    label: `Head height ${headPct(headMinRatio)}-${headPct(headMaxRatio)} of frame${babyMode ? " (infant)" : ""}`,
     status: headSizeStatus,
     detail: headSizeDetail
   });
@@ -246,7 +255,12 @@ export const evaluatePassportRequirements = (input: PassportCheckInput): Passpor
   let mouthDetail = "Face landmarks required.";
   let eyesStatus: CheckStatus = "manual";
   let eyesDetail = "Face landmarks required.";
-  if (landmarks && landmarks.length > 386) {
+  if (babyMode) {
+    mouthStatus = "manual";
+    mouthDetail = "Infants are exempt from the neutral-expression rule.";
+    eyesStatus = "manual";
+    eyesDetail = "Infants may have their eyes closed or partially open.";
+  } else if (landmarks && landmarks.length > 386) {
     const leftEye = landmarks[33];
     const rightEye = landmarks[263];
     const eyeDistance = Math.max(
