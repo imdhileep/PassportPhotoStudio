@@ -197,6 +197,7 @@ export default function ToolApp() {
   const [hue, setHue] = useLocalStorage<number>("pps_hue", 0);
   const [autoCrop, setAutoCrop] = useLocalStorage<boolean>("pps_auto_crop", true);
   const [autoStraighten, setAutoStraighten] = useLocalStorage<boolean>("pps_auto_straighten", true);
+  const [babyMode, setBabyMode] = useLocalStorage<boolean>("pps_baby_mode", false);
   const [manualAdjust, setManualAdjust] = useLocalStorage<boolean>("pps_manual_adjust", false);
   const [beforeAfterSplit, setBeforeAfterSplit] = useLocalStorage<number>("pps_before_after_split", 60);
   const [livePreview, setLivePreview] = useLocalStorage<boolean>("pps_live_preview", true);
@@ -772,6 +773,7 @@ export default function ToolApp() {
           cropZoom: debouncedCropZoom,
           qualityMode,
           autoStraighten,
+          babyMode,
           maxSize: INTERACTIVE_MAX_SIZE,
           maskThreshold: manualThreshold ? maskThreshold : undefined,
           birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null,
@@ -852,6 +854,7 @@ export default function ToolApp() {
     livePreview,
     setLivePreview,
     autoStraighten,
+    babyMode,
     segCacheKey
   ]);
 
@@ -906,6 +909,7 @@ export default function ToolApp() {
           cropOffset: debouncedCropOffset,
           cropZoom: debouncedCropZoom,
           qualityMode,
+          babyMode,
           maxSize: 960,
           maskThreshold: manualThreshold ? maskThreshold : undefined,
           birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null
@@ -1009,6 +1013,7 @@ export default function ToolApp() {
     autoRetouch,
     retouchStrength,
     autoCrop,
+    babyMode,
     manualAdjust,
     debouncedCropOffset,
     debouncedCropZoom,
@@ -1932,6 +1937,15 @@ export default function ToolApp() {
                             <p className="text-xs text-slate-500">Drag the preview to refine framing.</p>
                           </div>
                           <Switch checked={manualAdjust} onCheckedChange={setManualAdjust} />
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold">Baby / infant mode</p>
+                            <p className="text-xs text-slate-500">Relaxes eyes-open, expression &amp; head-size rules.</p>
+                          </div>
+                          <Switch checked={babyMode} onCheckedChange={setBabyMode} />
                         </div>
                       </div>
                     </div>
@@ -3161,6 +3175,7 @@ const processImage = async ({
   hue,
   autoCrop,
   autoStraighten,
+  babyMode,
   manualAdjust,
   cropOffset,
   cropZoom,
@@ -3187,6 +3202,7 @@ const processImage = async ({
   hue: number;
   autoCrop: boolean;
   autoStraighten?: boolean;
+  babyMode?: boolean;
   manualAdjust: boolean;
   cropOffset: { x: number; y: number };
   cropZoom: number;
@@ -3370,7 +3386,8 @@ const processImage = async ({
       brightness,
       contrast,
       saturation,
-      hue
+      hue,
+      babyMode
     });
   } catch (error) {
     console.error("Passport requirement check failed", error);
