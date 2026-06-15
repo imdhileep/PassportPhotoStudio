@@ -172,6 +172,7 @@ export default function ToolApp() {
   const [saturation, setSaturation] = useLocalStorage<number>("pps_saturation", 100);
   const [hue, setHue] = useLocalStorage<number>("pps_hue", 0);
   const [autoCrop, setAutoCrop] = useLocalStorage<boolean>("pps_auto_crop", true);
+  const [autoStraighten, setAutoStraighten] = useLocalStorage<boolean>("pps_auto_straighten", true);
   const [manualAdjust, setManualAdjust] = useLocalStorage<boolean>("pps_manual_adjust", false);
   const [beforeAfterSplit, setBeforeAfterSplit] = useLocalStorage<number>("pps_before_after_split", 60);
   const [livePreview, setLivePreview] = useLocalStorage<boolean>("pps_live_preview", true);
@@ -319,7 +320,7 @@ export default function ToolApp() {
   // changes (the photo, retry, processing resolution, mask threshold, or which engine is ready).
   const segCacheKey = `${inputUrl ?? ""}|${retryKey}|${INTERACTIVE_MAX_SIZE}|${qualityMode}|${
     manualThreshold ? maskThreshold : "auto"
-  }|${birefnetStatus.type === "ready" ? "birefnet" : "mediapipe"}`;
+  }|${birefnetStatus.type === "ready" ? "birefnet" : "mediapipe"}|${autoStraighten ? "str" : "raw"}`;
   const showModelStatus = false;
   const displayWarnings = inputUrl ? warnings : liveWarnings;
   const displayLightingWarnings = inputUrl ? lightingWarnings : [];
@@ -743,6 +744,7 @@ export default function ToolApp() {
           cropOffset: debouncedCropOffset,
           cropZoom: debouncedCropZoom,
           qualityMode,
+          autoStraighten,
           maxSize: INTERACTIVE_MAX_SIZE,
           maskThreshold: manualThreshold ? maskThreshold : undefined,
           birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null,
@@ -822,6 +824,7 @@ export default function ToolApp() {
     birefnetStatus.type,
     livePreview,
     setLivePreview,
+    autoStraighten,
     segCacheKey
   ]);
 
@@ -1884,6 +1887,15 @@ export default function ToolApp() {
                             <p className="text-xs text-slate-500">Uses face landmarks for alignment.</p>
                           </div>
                           <Switch checked={autoCrop} onCheckedChange={setAutoCrop} />
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold">Auto-straighten</p>
+                            <p className="text-xs text-slate-500">Levels a tilted head before cropping.</p>
+                          </div>
+                          <Switch checked={autoStraighten} onCheckedChange={setAutoStraighten} />
                         </div>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -3037,6 +3049,39 @@ type SegmentationCacheEntry = { key: string; mask: ImageData; confidence?: Float
 const cloneImageData = (img: ImageData) =>
   new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
 
+// Detect the eye line and rotate the image so the eyes are level (head tilt is a common passport
+// rejection). Returns the original image when there's no detectable face or only a negligible tilt.
+const straightenToLevelEyes = (
+  source: ImageBitmap | HTMLImageElement | HTMLCanvasElement,
+  width: number,
+  height: number,
+  bundle: Awaited<ReturnType<typeof loadVisionTasks>>
+): ImageBitmap | HTMLImageElement | HTMLCanvasElement => {
+  try {
+    const landmarks = detectFace(bundle, source).faceLandmarks?.[0];
+    const leftEye = landmarks?.[33];
+    const rightEye = landmarks?.[263];
+    if (!leftEye || !rightEye) return source;
+    const angle = Math.atan2((rightEye.y - leftEye.y) * height, (rightEye.x - leftEye.x) * width);
+    const deg = Math.abs((angle * 180) / Math.PI);
+    // Skip negligible tilt (avoids needless re-encoding) and extreme angles (likely a bad detection).
+    if (deg < 1.2 || deg > 18) return source;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return source;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate(-angle);
+    ctx.drawImage(source, -width / 2, -height / 2, width, height);
+    return canvas;
+  } catch {
+    return source;
+  }
+};
+
 const processImage = async ({
   image,
   bundle,
@@ -3053,6 +3098,7 @@ const processImage = async ({
   saturation,
   hue,
   autoCrop,
+  autoStraighten,
   manualAdjust,
   cropOffset,
   cropZoom,
@@ -3078,6 +3124,7 @@ const processImage = async ({
   saturation: number;
   hue: number;
   autoCrop: boolean;
+  autoStraighten?: boolean;
   manualAdjust: boolean;
   cropOffset: { x: number; y: number };
   cropZoom: number;
@@ -3089,9 +3136,13 @@ const processImage = async ({
   segmentationCacheKey?: string;
 }) => {
   const prepared = prepareImageForProcessing(image, maxSize);
-  const workingImage = prepared.image;
   const imageWidth = prepared.width;
   const imageHeight = prepared.height;
+  // Auto-straighten: level a tilted head before segmentation + crop so the whole pipeline works on
+  // an aligned image. Returns the original when there's no face or the tilt is negligible.
+  const workingImage = autoStraighten
+    ? straightenToLevelEyes(prepared.image, imageWidth, imageHeight, bundle)
+    : prepared.image;
   const backgroundWarnings: WarningItem[] = [];
   let refinedMask: ImageData | null = null;
   let edgeMetrics: EdgeMetrics | undefined;
