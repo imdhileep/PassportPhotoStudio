@@ -44,12 +44,36 @@ const qualityMap: Record<QualityMode, { label: string; ppi: number; jpg: number;
   ultra: { label: "Ultra (600 DPI)", ppi: 600, jpg: 0.98, threshold: 0.04 }
 };
 
+const BG_WHITE = "#ffffff";
+const BG_OFFWHITE = "#f8f7f2";
+const BG_GREY = "#d9dadb";
+const BG_BLUE = "#dbeafe";
+
 const backgrounds = [
-  { id: "white", label: "Bright White", value: "#ffffff" },
-  { id: "offwhite", label: "Soft Ivory", value: "#f8f7f2" },
-  { id: "blue", label: "Light Blue", value: "#dbeafe" },
+  { id: "white", label: "Bright White", value: BG_WHITE },
+  { id: "offwhite", label: "Soft Ivory", value: BG_OFFWHITE },
+  { id: "grey", label: "Light Grey", value: BG_GREY },
+  { id: "blue", label: "Light Blue", value: BG_BLUE },
   { id: "transparent", label: "Transparent", value: "transparent" }
 ];
+
+// Per-country background compliance. `allowed` lists acceptable background values (lowercased
+// hex/keywords); an empty list means no enforcement (custom sizes). When the chosen color isn't
+// allowed for the selected standard, the rendered output falls back to `recommended` and an info
+// warning is shown. This generalizes what used to be a US-only white-background override to every
+// supported passport standard (e.g. UK/EU want light grey; only India accepts light blue).
+const BACKGROUND_SPEC: Record<
+  PassportStandard["id"],
+  { country: string; recommended: string; recommendedLabel: string; allowed: string[] }
+> = {
+  us: { country: "US", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE] },
+  india: { country: "India", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE, BG_BLUE] },
+  uk: { country: "UK", recommended: BG_GREY, recommendedLabel: "Light Grey", allowed: [BG_GREY, BG_OFFWHITE, "white", "#ffffff", "#fff"] },
+  eu: { country: "EU / Schengen", recommended: BG_GREY, recommendedLabel: "Light Grey", allowed: [BG_GREY, BG_OFFWHITE, "white", "#ffffff", "#fff"] },
+  canada: { country: "Canada", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE] },
+  australia: { country: "Australia", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE, BG_GREY] },
+  custom: { country: "Custom", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: [] }
+};
 
 type ModelStatus = {
   ready: boolean;
@@ -274,6 +298,9 @@ export default function ToolApp() {
     { id: "custom", label: "Custom size", size: `${Math.max(20, customWidth)}x${Math.max(20, customHeight)} mm` }
   ];
   const backgroundColor = useCustomBg ? customBackground : background;
+  const bgSpec = BACKGROUND_SPEC[standard.id];
+  const bgEnforced = bgSpec.allowed.length > 0;
+  const bgCompliant = !bgEnforced || bgSpec.allowed.includes(backgroundColor.trim().toLowerCase());
   const debouncedFeather = useDebouncedValue(feather, 150);
   const debouncedRefineStrength = useDebouncedValue(refineStrength, 150);
   const debouncedEdgeIntensity = useDebouncedValue(edgeIntensity, 150);
@@ -2097,6 +2124,41 @@ export default function ToolApp() {
                         <span className="text-xs text-slate-600">Choose a compliant background color.</span>
                       </div>
                     )}
+                    {bgEnforced && (
+                      <div
+                        className={cn(
+                          "rounded-2xl border px-4 py-3 text-xs",
+                          bgCompliant
+                            ? "border-slate-200 bg-slate-50 text-slate-600"
+                            : "border-amber-300 bg-amber-50 text-amber-800"
+                        )}
+                      >
+                        {bgCompliant ? (
+                          <span>
+                            Recommended for {bgSpec.country}:{" "}
+                            <span className="font-semibold">{bgSpec.recommendedLabel}</span> — your background is
+                            compliant.
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span>
+                              This color isn&apos;t accepted for {bgSpec.country} passports — the output will use{" "}
+                              <span className="font-semibold">{bgSpec.recommendedLabel}</span>.
+                            </span>
+                            <button
+                              type="button"
+                              className="rounded-full border border-amber-400 px-3 py-1 font-semibold text-amber-800 transition hover:bg-amber-100"
+                              onClick={() => {
+                                setBackground(bgSpec.recommended);
+                                setUseCustomBg(false);
+                              }}
+                            >
+                              Use {bgSpec.recommendedLabel}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </Card>
                 <div className="flex items-center justify-between">
@@ -3242,19 +3304,16 @@ const processImage = async ({
     });
   }
   const normalizedBackground = backgroundColor.trim().toLowerCase();
-  const usBackgroundAllowed =
-    normalizedBackground === "#ffffff" ||
-    normalizedBackground === "#fff" ||
-    normalizedBackground === "white" ||
-    normalizedBackground === "#f8f7f2";
-  const resolvedBackgroundColor =
-    standard.id === "us" && !usBackgroundAllowed ? "#ffffff" : backgroundColor;
-  if (standard.id === "us" && resolvedBackgroundColor !== backgroundColor) {
+  const bgSpec = BACKGROUND_SPEC[standard.id] ?? BACKGROUND_SPEC.custom;
+  const bgEnforced = bgSpec.allowed.length > 0;
+  const bgAllowed = !bgEnforced || bgSpec.allowed.includes(normalizedBackground);
+  const resolvedBackgroundColor = bgEnforced && !bgAllowed ? bgSpec.recommended : backgroundColor;
+  if (bgEnforced && !bgAllowed) {
     backgroundWarnings.push({
-      id: "bg_us_adjusted",
+      id: "bg_country_adjusted",
       level: "info",
-      title: "Background adjusted for US passport",
-      detail: "US passport output uses plain white/off-white background."
+      title: `Background adjusted for ${bgSpec.country} passport`,
+      detail: `${bgSpec.country} passport photos need a ${bgSpec.recommendedLabel.toLowerCase()} background, so the output uses it.`
     });
   }
   const correctedSubject = removeEdgeHalo(sourceImageData, refinedMask);
