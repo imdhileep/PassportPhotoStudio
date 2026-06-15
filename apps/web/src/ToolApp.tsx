@@ -2608,7 +2608,7 @@ export default function ToolApp() {
                 <div>
                   <CardTitle>Key Photo Requirements</CardTitle>
                   <CardDescription>
-                    AI checks US passport rules by default and highlights what to fix.
+                    AI checks {standard.label} rules and highlights what to fix.
                   </CardDescription>
                 </div>
               </CardHeader>

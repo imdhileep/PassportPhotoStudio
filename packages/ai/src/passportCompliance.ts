@@ -1,4 +1,5 @@
 import type { CropRect, PassportStandard } from "./types";
+import { HEAD_HEIGHT_MIN_RATIO, HEAD_HEIGHT_MAX_RATIO } from "./crop";
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 
@@ -179,14 +180,17 @@ export const evaluatePassportRequirements = (input: PassportCheckInput): Passpor
 
   const items: RequirementItem[] = [];
 
-  const isUsTwoByTwo = Math.abs(standard.widthMm - 50.8) < 0.5 && Math.abs(standard.heightMm - 50.8) < 0.5;
+  // The output is always rendered to the selected template's exact size, so dimensions pass by
+  // construction — we surface the size and ask the user to confirm it matches their destination.
+  const widthIn = standard.widthMm / 25.4;
+  const heightIn = standard.heightMm / 25.4;
   items.push({
     id: "dimensions",
-    label: "Dimensions 2x2 in (51x51 mm)",
-    status: yesNo(isUsTwoByTwo),
-    detail: isUsTwoByTwo
-      ? "Template is set to US passport size."
-      : `Current template is ${standard.label}. Switch to US 2x2 for this requirement.`
+    label: `Dimensions — ${standard.label}`,
+    status: "pass",
+    detail: `Output is rendered to ${standard.widthMm.toFixed(0)}x${standard.heightMm.toFixed(
+      0
+    )} mm (${widthIn.toFixed(2)}x${heightIn.toFixed(2)} in). Confirm this matches your destination country.`
   });
 
   const bg = analyzeBackground(compositedImage, mask);
@@ -201,6 +205,11 @@ export const evaluatePassportRequirements = (input: PassportCheckInput): Passpor
       : "Background is not fully uniform white/off-white. Adjust background and edge refine."
   });
 
+  // Head height as a fraction of the photo height, using the same per-country framing range the
+  // crop targets (US uses the documented 25-35 mm of a 51 mm photo; others use headRatioRange).
+  const [headMinRatio, headMaxRatio] =
+    standard.id === "us" ? [HEAD_HEIGHT_MIN_RATIO, HEAD_HEIGHT_MAX_RATIO] : standard.headRatioRange;
+  const headPct = (ratio: number) => `${Math.round(ratio * 100)}%`;
   let headSizeStatus: CheckStatus = "manual";
   let headSizeDetail = "Face landmarks required.";
   if (landmarks && landmarks.length > 386) {
@@ -215,20 +224,28 @@ export const evaluatePassportRequirements = (input: PassportCheckInput): Passpor
     const topHairY = estimateTopHairY(mask, crop, faceCenterX, faceWidth);
     const chinY = chin.y * image.height;
     const headPx = Math.max(1, chinY - topHairY);
-    const headMm = (headPx / Math.max(1, crop.height)) * standard.heightMm;
-    const headOk = headMm >= 25 && headMm <= 35;
+    const headRatio = headPx / Math.max(1, crop.height);
+    const headOk = headRatio >= headMinRatio && headRatio <= headMaxRatio;
     headSizeStatus = yesNo(headOk);
-    headSizeDetail = `Estimated top-hair to chin: ${headMm.toFixed(1)} mm (required 25-35 mm).`;
+    headSizeDetail = headOk
+      ? `Head fills ${headPct(headRatio)} of the frame (target ${headPct(headMinRatio)}-${headPct(headMaxRatio)}).`
+      : `Head fills ${headPct(headRatio)} of the frame — ${
+          headRatio < headMinRatio ? "move closer" : "move back"
+        } so it's ${headPct(headMinRatio)}-${headPct(headMaxRatio)}.`;
   }
   items.push({
     id: "head_size",
-    label: "Head size 25-35 mm",
+    label: `Head height ${headPct(headMinRatio)}-${headPct(headMaxRatio)} of frame`,
     status: headSizeStatus,
     detail: headSizeDetail
   });
 
-  let expressionStatus: CheckStatus = "manual";
-  let expressionDetail = "Face landmarks required.";
+  // Split mouth and eyes into separate, actionable checks (a closed-but-smiling mouth and a closed
+  // eye are distinct rejection causes, so users benefit from knowing exactly which one failed).
+  let mouthStatus: CheckStatus = "manual";
+  let mouthDetail = "Face landmarks required.";
+  let eyesStatus: CheckStatus = "manual";
+  let eyesDetail = "Face landmarks required.";
   if (landmarks && landmarks.length > 386) {
     const leftEye = landmarks[33];
     const rightEye = landmarks[263];
@@ -262,16 +279,26 @@ export const evaluatePassportRequirements = (input: PassportCheckInput): Passpor
     );
     const mouthClosed = mouthOpen <= 0.05;
     const eyesOpen = leftEyeOpen >= 0.017 && rightEyeOpen >= 0.017;
-    expressionStatus = yesNo(mouthClosed && eyesOpen);
-    expressionDetail = `Mouth ratio ${mouthOpen.toFixed(3)}, eyes ${leftEyeOpen.toFixed(3)}/${rightEyeOpen.toFixed(
-      3
-    )}.`;
+    mouthStatus = yesNo(mouthClosed);
+    mouthDetail = mouthClosed
+      ? "Mouth is closed with a neutral expression."
+      : "Mouth looks open or smiling — keep a neutral expression with your lips together.";
+    eyesStatus = yesNo(eyesOpen);
+    eyesDetail = eyesOpen
+      ? "Both eyes are open and clearly visible."
+      : "One or both eyes look closed — keep your eyes open and visible.";
   }
   items.push({
-    id: "expression",
-    label: "Neutral expression, mouth closed, eyes open",
-    status: expressionStatus,
-    detail: expressionDetail
+    id: "expression_mouth",
+    label: "Neutral expression, mouth closed",
+    status: mouthStatus,
+    detail: mouthDetail
+  });
+  items.push({
+    id: "expression_eyes",
+    label: "Eyes open and visible",
+    status: eyesStatus,
+    detail: eyesDetail
   });
 
   let appearanceStatus: CheckStatus = "manual";
