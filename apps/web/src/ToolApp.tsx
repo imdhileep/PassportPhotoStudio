@@ -179,6 +179,9 @@ export default function ToolApp() {
   const [maskThreshold, setMaskThreshold] = useLocalStorage<number>("pps_mask_threshold", 0.08);
   const [capturedFromCamera, setCapturedFromCamera] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [submissionResult, setSubmissionResult] = useState<
+    { w: number; h: number; kb: number; label: string } | null
+  >(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [theme, setTheme] = useLocalStorage<"dark" | "light">("pps_theme", "dark");
 
@@ -1480,6 +1483,25 @@ export default function ToolApp() {
     downloadBlob(blob, `passport-${standard.id}-4x6.jpg`);
   };
 
+  // Export a JPG that meets an online portal's exact pixel size + file-size limit.
+  const handleExportSubmission = async (targetId: string) => {
+    const canvas = processedCanvasRef.current;
+    if (!canvas) return;
+    const target = submissionTargets.find((item) => item.id === targetId) ?? submissionTargets[0];
+    const rendered = target.longestPx
+      ? renderPassportToLongestEdge(canvas, standard, target.longestPx)
+      : renderPassport(canvas, standard, qualityMap[qualityMode].ppi);
+    const flattened = flattenCanvas(rendered, "#ffffff");
+    const blob = await encodeJpegUnderBytes(flattened, target.maxKB ? target.maxKB * 1024 : null);
+    downloadBlob(blob, `passport-${standard.id}-${target.id}.jpg`);
+    setSubmissionResult({
+      w: flattened.width,
+      h: flattened.height,
+      kb: Math.round(blob.size / 1024),
+      label: target.label
+    });
+  };
+
   const handleTryAgain = () => {
     setErrorMessages([]);
     setRetryKey((prev) => prev + 1);
@@ -2414,6 +2436,29 @@ export default function ToolApp() {
                       </div>
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">For online submission</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Export a JPG sized for online portals — exact pixels and a file-size cap.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {submissionTargets.map((target) => (
+                          <Button
+                            key={target.id}
+                            variant="outline"
+                            onClick={() => handleExportSubmission(target.id)}
+                          >
+                            {target.button}
+                          </Button>
+                        ))}
+                      </div>
+                      {submissionResult && (
+                        <p className="mt-3 text-xs font-medium text-emerald-700">
+                          ✓ Exported {submissionResult.w} × {submissionResult.h} px · {submissionResult.kb} KB (
+                          {submissionResult.label})
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
                       <p className="text-xs uppercase tracking-wide text-slate-500">Compliance checklist</p>
                       <div className="mt-2 grid gap-2">
                         {[
@@ -3321,6 +3366,51 @@ const downloadBlob = (blob: Blob, filename: string) => {
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+};
+
+type SubmissionTarget = {
+  id: string;
+  button: string;
+  label: string;
+  longestPx: number | null; // null → use the print DPI from the quality mode
+  maxKB: number | null; // null → no size cap (encode at high quality)
+};
+
+// Common online-submission targets. `longestPx` sets the exact output size (aspect preserved from
+// the selected standard); `maxKB` caps the file size. US DV Lottery is the canonical 600x600/240KB.
+const submissionTargets: SubmissionTarget[] = [
+  { id: "print300", button: "Print JPG (300 DPI)", label: "Print 300 DPI", longestPx: null, maxKB: null },
+  { id: "dv600", button: "US DV Lottery (600px · ≤240KB)", label: "US DV Lottery 600px", longestPx: 600, maxKB: 240 },
+  { id: "small100", button: "Small file (≤100KB)", label: "Online ≤100KB", longestPx: 600, maxKB: 100 }
+];
+
+// Render the passport scaled so its longest edge is `longestPx`, preserving the standard's aspect.
+const renderPassportToLongestEdge = (
+  source: HTMLCanvasElement,
+  standard: PassportStandard,
+  longestPx: number
+) => {
+  const longestIn = Math.max(standard.widthMm, standard.heightMm) / 25.4;
+  return renderPassport(source, standard, longestPx / longestIn);
+};
+
+// Encode to JPEG at the highest quality whose file size stays under maxBytes (binary search).
+const encodeJpegUnderBytes = async (canvas: HTMLCanvasElement, maxBytes: number | null) => {
+  if (maxBytes == null) return toBlob(canvas, "image/jpeg", 0.92);
+  let lo = 0.3;
+  let hi = 0.95;
+  let best: Blob | null = null;
+  for (let i = 0; i < 8; i += 1) {
+    const q = (lo + hi) / 2;
+    const blob = await toBlob(canvas, "image/jpeg", q);
+    if (blob.size <= maxBytes) {
+      best = blob;
+      lo = q;
+    } else {
+      hi = q;
+    }
+  }
+  return best ?? (await toBlob(canvas, "image/jpeg", 0.3));
 };
 
 const drawPreviewCanvas = (target: HTMLCanvasElement | null, source: HTMLCanvasElement) => {
