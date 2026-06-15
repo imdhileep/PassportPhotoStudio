@@ -113,13 +113,22 @@ export default function Landing() {
 
       <Section id="countries" eyebrow="Countries" title="Global sizing presets">
         <div className="grid gap-4 md:grid-cols-3">
-          {["United States", "India", "Canada", "United Kingdom", "EU", "Australia"].map((country) => (
-            <Card key={country} className="glass">
-              <div className="p-5 text-sm text-slate-600">
-                <p className="text-slate-900">{country}</p>
-                <p className="text-xs text-slate-500">Passport + ID sizes supported</p>
-              </div>
-            </Card>
+          {[
+            { name: "United States", slug: "united-states", size: "2x2 in" },
+            { name: "India", slug: "india", size: "35x45 mm" },
+            { name: "Canada", slug: "canada", size: "50x70 mm" },
+            { name: "United Kingdom", slug: "united-kingdom", size: "35x45 mm" },
+            { name: "Schengen / EU", slug: "schengen-visa", size: "35x45 mm" },
+            { name: "Australia", slug: "australia", size: "35x45 mm" }
+          ].map((country) => (
+            <a key={country.slug} href={`/passport-photo/${country.slug}`} className="block">
+              <Card className="glass transition hover:border-amber-400">
+                <div className="p-5 text-sm text-slate-600">
+                  <p className="text-slate-900">{country.name}</p>
+                  <p className="text-xs text-slate-500">{country.size} passport photo guide →</p>
+                </div>
+              </Card>
+            </a>
           ))}
         </div>
       </Section>

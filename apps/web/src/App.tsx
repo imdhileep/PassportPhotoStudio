@@ -8,6 +8,7 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const FaqPage = lazy(() => import("./pages/FaqPage"));
 const Login = lazy(() => import("./pages/Login"));
+const CountryGuide = lazy(() => import("./pages/CountryGuide"));
 
 const RouteFallback = () => (
   <div className="flex min-h-screen items-center justify-center bg-white text-slate-800">
@@ -79,6 +80,14 @@ export default function App() {
     return (
       <Suspense fallback={<RouteFallback />}>
         <Login />
+      </Suspense>
+    );
+  }
+  if (path.startsWith("/passport-photo/")) {
+    const slug = path.slice("/passport-photo/".length).replace(/\/+$/, "");
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <CountryGuide slug={slug} />
       </Suspense>
     );
   }
