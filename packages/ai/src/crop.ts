@@ -74,6 +74,36 @@ export const passportStandards: PassportStandard[] = [
     bottomMarginRatio: 0.08
   },
   {
+    id: "china",
+    label: "China 33x48 mm",
+    widthMm: 33,
+    heightMm: 48,
+    eyeLineRatio: 0.55,
+    headRatioRange: [0.6, 0.72],
+    topMarginRatio: 0.08,
+    bottomMarginRatio: 0.08
+  },
+  {
+    id: "japan",
+    label: "Japan visa 45x45 mm",
+    widthMm: 45,
+    heightMm: 45,
+    eyeLineRatio: 0.5,
+    headRatioRange: [0.7, 0.8],
+    topMarginRatio: 0.08,
+    bottomMarginRatio: 0.08
+  },
+  {
+    id: "brazil",
+    label: "Brazil 30x40 mm",
+    widthMm: 30,
+    heightMm: 40,
+    eyeLineRatio: 0.56,
+    headRatioRange: [0.62, 0.78],
+    topMarginRatio: 0.08,
+    bottomMarginRatio: 0.08
+  },
+  {
     id: "custom",
     label: "Custom",
     widthMm: 35,
