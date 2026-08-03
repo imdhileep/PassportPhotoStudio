@@ -1620,6 +1620,46 @@ export default function ToolApp() {
     }
   };
 
+  // Web Share support (recomputed per render — trivial cost, and keeps the check current).
+  // On phones this lets users send the photo straight to WhatsApp/Photos/print apps.
+  const canShareFiles = (() => {
+    if (
+      typeof navigator === "undefined" ||
+      typeof navigator.share !== "function" ||
+      typeof navigator.canShare !== "function"
+    ) {
+      return false;
+    }
+    try {
+      const probe = new File([new Uint8Array([0xff, 0xd8])], "probe.jpg", { type: "image/jpeg" });
+      return navigator.canShare({ files: [probe] });
+    } catch {
+      return false;
+    }
+  })();
+
+  const handleSharePhoto = async () => {
+    const canvas = processedCanvasRef.current;
+    if (!canvas) return;
+    let output = renderPassport(canvas, standard, qualityMap[qualityMode].ppi);
+    if (backgroundColor === "transparent") {
+      output = flattenCanvas(output, "#ffffff");
+    }
+    const blob = await toBlob(output, "image/jpeg", qualityMap[qualityMode].jpg);
+    const file = new File([blob], `passport-${standard.id}.jpg`, { type: "image/jpeg" });
+    try {
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Passport photo" });
+        return;
+      }
+    } catch (error) {
+      // User closed the share sheet — not an error, and no fallback wanted.
+      if (error instanceof DOMException && error.name === "AbortError") return;
+    }
+    // Share unavailable or failed mid-flight: fall back to a normal download.
+    downloadBlob(blob, `passport-${standard.id}.jpg`);
+  };
+
   const handleTryAgain = () => {
     setErrorMessages([]);
     setRetryKey((prev) => prev + 1);
@@ -2580,6 +2620,11 @@ export default function ToolApp() {
                         <Button variant="accent" onClick={handleExportBundle} disabled={processing}>
                           Download all (ZIP)
                         </Button>
+                        {canShareFiles && (
+                          <Button variant="outline" onClick={handleSharePhoto}>
+                            Share photo
+                          </Button>
+                        )}
                         <select
                           value={sheetFormatId}
                           onChange={(event) => setSheetFormatId(event.target.value as SheetFormatId)}
@@ -2906,6 +2951,11 @@ export default function ToolApp() {
               <Button variant="accent" onClick={handleExportSheet}>
                 {sheetFormat.label}
               </Button>
+              {canShareFiles && (
+                <Button variant="outline" onClick={handleSharePhoto}>
+                  Share
+                </Button>
+              )}
             </div>
           </div>
         )}
