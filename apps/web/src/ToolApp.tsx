@@ -44,6 +44,41 @@ const qualityMap: Record<QualityMode, { label: string; ppi: number; jpg: number;
   ultra: { label: "Ultra (600 DPI)", ppi: 600, jpg: 0.98, threshold: 0.04 }
 };
 
+// Print-sheet formats. 4x6/5x7 are lab prints (CVS, Walgreens, Boots) in landscape; A4/Letter are
+// home-printer sizes in portrait with a wider safety margin (consumer printers can't print edge-to-edge).
+const sheetFormats = [
+  { id: "4x6", label: "4x6 in", widthIn: 6, heightIn: 4, marginIn: 0.1, note: "Photo lab print" },
+  { id: "5x7", label: "5x7 in", widthIn: 7, heightIn: 5, marginIn: 0.1, note: "Photo lab print" },
+  { id: "a4", label: "A4", widthIn: 210 / 25.4, heightIn: 297 / 25.4, marginIn: 0.25, note: "Home printer" },
+  { id: "letter", label: "US Letter", widthIn: 8.5, heightIn: 11, marginIn: 0.25, note: "Home printer" }
+] as const;
+type SheetFormat = (typeof sheetFormats)[number];
+type SheetFormatId = SheetFormat["id"];
+
+// Grid math shared by the renderer and the UI's photos-per-sheet display: how many photos fit,
+// with a cutting gap between them, centered inside the printable area.
+const computeSheetLayout = (photoWidth: number, photoHeight: number, format: SheetFormat, ppi: number) => {
+  const sheetWidth = Math.round(format.widthIn * ppi);
+  const sheetHeight = Math.round(format.heightIn * ppi);
+  const margin = Math.round(format.marginIn * ppi);
+  const gap = Math.max(2, Math.round(0.08 * ppi));
+  const usableWidth = sheetWidth - margin * 2;
+  const usableHeight = sheetHeight - margin * 2;
+  const cols = Math.max(1, Math.floor((usableWidth + gap) / (photoWidth + gap)));
+  const rows = Math.max(1, Math.floor((usableHeight + gap) / (photoHeight + gap)));
+  const gridWidth = cols * photoWidth + (cols - 1) * gap;
+  const gridHeight = rows * photoHeight + (rows - 1) * gap;
+  return {
+    sheetWidth,
+    sheetHeight,
+    gap,
+    cols,
+    rows,
+    offsetX: Math.max(margin, Math.round((sheetWidth - gridWidth) / 2)),
+    offsetY: Math.max(margin, Math.round((sheetHeight - gridHeight) / 2))
+  };
+};
+
 const BG_WHITE = "#ffffff";
 const BG_OFFWHITE = "#f8f7f2";
 const BG_GREY = "#d9dadb";
@@ -201,6 +236,7 @@ export default function ToolApp() {
   const [autoCrop, setAutoCrop] = useLocalStorage<boolean>("pps_auto_crop", true);
   const [autoStraighten, setAutoStraighten] = useLocalStorage<boolean>("pps_auto_straighten", true);
   const [babyMode, setBabyMode] = useLocalStorage<boolean>("pps_baby_mode", false);
+  const [sheetFormatId, setSheetFormatId] = useLocalStorage<SheetFormatId>("pps_sheet_format", "4x6");
   const [manualAdjust, setManualAdjust] = useLocalStorage<boolean>("pps_manual_adjust", false);
   const [beforeAfterSplit, setBeforeAfterSplit] = useLocalStorage<number>("pps_before_after_split", 60);
   const [livePreview, setLivePreview] = useLocalStorage<boolean>("pps_live_preview", true);
@@ -343,7 +379,7 @@ export default function ToolApp() {
     3: "Choose a compliant background or keep it transparent.",
     4: "Refine edges and feathering to remove halos.",
     5: "Adjust brightness, contrast, and presets to match standards.",
-    6: "Export PNG/JPG or a 4x6 print sheet."
+    6: "Export PNG/JPG or a print sheet (4x6, 5x7, A4, Letter)."
   };
   const maxStep = inputUrl ? 6 : cameraActive ? 2 : 1;
   const activeStep = currentStep;
@@ -376,8 +412,11 @@ export default function ToolApp() {
   const holdStillActive = holdStillCountdown !== null;
   const expectedWidthPx = Math.round((standard.widthMm / 25.4) * qualityMap[qualityMode].ppi);
   const expectedHeightPx = Math.round((standard.heightMm / 25.4) * qualityMap[qualityMode].ppi);
-  const sheetWidthPx = Math.round(6 * qualityMap[qualityMode].ppi);
-  const sheetHeightPx = Math.round(4 * qualityMap[qualityMode].ppi);
+  const sheetFormat = sheetFormats.find((format) => format.id === sheetFormatId) ?? sheetFormats[0];
+  const sheetLayout = computeSheetLayout(expectedWidthPx, expectedHeightPx, sheetFormat, qualityMap[qualityMode].ppi);
+  const sheetWidthPx = sheetLayout.sheetWidth;
+  const sheetHeightPx = sheetLayout.sheetHeight;
+  const sheetPhotoCount = sheetLayout.cols * sheetLayout.rows;
   const guideStyle = liveGuide
     ? {
         left: `${(liveGuide.crop.x / liveGuide.imageWidth) * 100}%`,
@@ -1516,9 +1555,9 @@ export default function ToolApp() {
   const handleExportSheet = async () => {
     const canvas = processedCanvasRef.current;
     if (!canvas) return;
-    const sheet = renderSheet(canvas, standard, qualityMap[qualityMode].ppi);
+    const sheet = renderSheet(canvas, standard, qualityMap[qualityMode].ppi, sheetFormat);
     const blob = await toBlob(sheet, "image/jpeg", qualityMap[qualityMode].jpg);
-    downloadBlob(blob, `passport-${standard.id}-4x6.jpg`);
+    downloadBlob(blob, `passport-${standard.id}-${sheetFormat.id}.jpg`);
   };
 
   // Export a JPG that meets an online portal's exact pixel size + file-size limit.
@@ -2497,8 +2536,20 @@ export default function ToolApp() {
                             </Button>
                           </>
                         )}
+                        <select
+                          value={sheetFormatId}
+                          onChange={(event) => setSheetFormatId(event.target.value as SheetFormatId)}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                          aria-label="Print sheet size"
+                        >
+                          {sheetFormats.map((format) => (
+                            <option key={format.id} value={format.id}>
+                              {format.label} — {format.note}
+                            </option>
+                          ))}
+                        </select>
                         <Button variant="accent" onClick={handleExportSheet}>
-                          4x6 Sheet
+                          {sheetFormat.label} Sheet
                         </Button>
                         {appConfig.serverEnabled && (
                           <Button variant="ghost" onClick={handleShare} disabled={shareLoading}>
@@ -2521,8 +2572,12 @@ export default function ToolApp() {
                           <span>{`${expectedWidthPx} x ${expectedHeightPx} px @ ${qualityMap[qualityMode].ppi} DPI`}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>4x6 sheet</span>
+                          <span>{sheetFormat.label} sheet</span>
                           <span>{`${sheetWidthPx} x ${sheetHeightPx} px @ ${qualityMap[qualityMode].ppi} DPI`}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Photos per sheet</span>
+                          <span>{`${sheetPhotoCount} (${sheetLayout.cols} x ${sheetLayout.rows}, with cut guides)`}</span>
                         </div>
                       </div>
                     </div>
@@ -2805,7 +2860,7 @@ export default function ToolApp() {
                 JPG
               </Button>
               <Button variant="accent" onClick={handleExportSheet}>
-                4x6
+                {sheetFormat.label}
               </Button>
             </div>
           </div>
@@ -3457,24 +3512,50 @@ const renderPassport = (source: HTMLCanvasElement, standard: PassportStandard, p
   return canvas;
 };
 
-const renderSheet = (source: HTMLCanvasElement, standard: PassportStandard, ppi: number) => {
-  const sheetWidth = 6 * ppi;
-  const sheetHeight = 4 * ppi;
+const renderSheet = (
+  source: HTMLCanvasElement,
+  standard: PassportStandard,
+  ppi: number,
+  format: SheetFormat = sheetFormats[0]
+) => {
   const photo = renderPassport(source, standard, ppi);
-  const cols = Math.max(1, Math.floor(sheetWidth / photo.width));
-  const rows = Math.max(1, Math.floor(sheetHeight / photo.height));
+  const layout = computeSheetLayout(photo.width, photo.height, format, ppi);
   const canvas = document.createElement("canvas");
-  canvas.width = sheetWidth;
-  canvas.height = sheetHeight;
+  canvas.width = layout.sheetWidth;
+  canvas.height = layout.sheetHeight;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas unavailable.");
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, sheetWidth, sheetHeight);
-  for (let y = 0; y < rows; y += 1) {
-    for (let x = 0; x < cols; x += 1) {
-      ctx.drawImage(photo, x * photo.width, y * photo.height, photo.width, photo.height);
+  ctx.fillRect(0, 0, layout.sheetWidth, layout.sheetHeight);
+  for (let y = 0; y < layout.rows; y += 1) {
+    for (let x = 0; x < layout.cols; x += 1) {
+      const px = layout.offsetX + x * (photo.width + layout.gap);
+      const py = layout.offsetY + y * (photo.height + layout.gap);
+      ctx.drawImage(photo, px, py, photo.width, photo.height);
     }
   }
+  // Dashed cutting guides along every photo edge (spanning the full sheet) so scissors have a
+  // line to follow.
+  ctx.strokeStyle = "#94a3b8";
+  ctx.lineWidth = Math.max(1, Math.round(ppi / 300));
+  ctx.setLineDash([Math.round(ppi / 25), Math.round(ppi / 25)]);
+  ctx.beginPath();
+  for (let x = 0; x < layout.cols; x += 1) {
+    const left = layout.offsetX + x * (photo.width + layout.gap);
+    for (const lineX of [left, left + photo.width]) {
+      ctx.moveTo(lineX, 0);
+      ctx.lineTo(lineX, layout.sheetHeight);
+    }
+  }
+  for (let y = 0; y < layout.rows; y += 1) {
+    const top = layout.offsetY + y * (photo.height + layout.gap);
+    for (const lineY of [top, top + photo.height]) {
+      ctx.moveTo(0, lineY);
+      ctx.lineTo(layout.sheetWidth, lineY);
+    }
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
   return canvas;
 };
 
