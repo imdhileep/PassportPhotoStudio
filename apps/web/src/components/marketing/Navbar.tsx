@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui";
+import { usePwaInstall } from "@/lib/usePwaInstall";
 
 export default function Navbar() {
+  const { canInstall, promptInstall } = usePwaInstall();
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-night/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
@@ -29,6 +31,11 @@ export default function Navbar() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
+          {canInstall && (
+            <Button variant="ghost" onClick={promptInstall}>
+              Install app
+            </Button>
+          )}
           <Button
             variant="accent"
             onClick={() => {
