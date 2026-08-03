@@ -72,6 +72,9 @@ const BACKGROUND_SPEC: Record<
   eu: { country: "EU / Schengen", recommended: BG_GREY, recommendedLabel: "Light Grey", allowed: [BG_GREY, BG_OFFWHITE, "white", "#ffffff", "#fff"] },
   canada: { country: "Canada", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE] },
   australia: { country: "Australia", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE, BG_GREY] },
+  china: { country: "China", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE] },
+  japan: { country: "Japan", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE, BG_GREY] },
+  brazil: { country: "Brazil", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: ["white", "#ffffff", "#fff", BG_OFFWHITE] },
   custom: { country: "Custom", recommended: BG_WHITE, recommendedLabel: "Bright White", allowed: [] }
 };
 
