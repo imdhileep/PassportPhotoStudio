@@ -119,7 +119,8 @@ export default function Landing() {
             { name: "Canada", slug: "canada", size: "50x70 mm" },
             { name: "United Kingdom", slug: "united-kingdom", size: "35x45 mm" },
             { name: "Schengen / EU", slug: "schengen-visa", size: "35x45 mm" },
-            { name: "Australia", slug: "australia", size: "35x45 mm" }
+            { name: "Australia", slug: "australia", size: "35x45 mm" },
+            { name: "Baby & infants", slug: "baby", size: "Relaxed rules" }
           ].map((country) => (
             <a key={country.slug} href={`/passport-photo/${country.slug}`} className="block">
               <Card className="glass transition hover:border-amber-400">

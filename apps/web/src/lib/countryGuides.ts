@@ -15,6 +15,9 @@ export type CountryGuide = {
   rules: string[];
   title: string;
   description: string;
+  faq: { q: string; a: string }[];
+  // Overrides the default /app?country={standardLabel} CTA (used by the baby guide to enable baby mode).
+  ctaHref?: string;
 };
 
 export const countryGuides: CountryGuide[] = [
@@ -37,7 +40,25 @@ export const countryGuides: CountryGuide[] = [
     ],
     title: "US Passport Photo Maker — 2x2 in, Free Online | Passport Photo Studio",
     description:
-      "Create a compliant US passport photo (2x2 in, white background) free in your browser. Auto-crop to 50–69% head height, remove the background, and export print or digital."
+      "Create a compliant US passport photo (2x2 in, white background) free in your browser. Auto-crop to 50–69% head height, remove the background, and export print or digital.",
+    faq: [
+      {
+        q: "What size is a US passport photo?",
+        a: "2 x 2 inches (51 x 51 mm), with the head measuring 1 to 1⅜ inches (25–35 mm) from chin to crown — roughly 50–69% of the photo height."
+      },
+      {
+        q: "Can I wear glasses in a US passport photo?",
+        a: "No. Since 2016 glasses are not allowed unless you have a signed medical statement explaining they cannot be removed."
+      },
+      {
+        q: "Can I smile in a US passport photo?",
+        a: "A neutral expression or a natural, closed-mouth smile is accepted. Keep both eyes open and your mouth closed."
+      },
+      {
+        q: "Can I take a US passport photo with my phone?",
+        a: "Yes. Take a photo in even lighting facing the camera, and this tool crops it to 2x2, replaces the background with white, and checks head size and expression."
+      }
+    ]
   },
   {
     slug: "united-kingdom",
@@ -58,7 +79,21 @@ export const countryGuides: CountryGuide[] = [
     ],
     title: "UK Passport Photo Maker — 35x45 mm, Free Online | Passport Photo Studio",
     description:
-      "Make a compliant UK passport photo (35x45 mm, light grey background) free online. Correct head size, neutral expression checks, and export for the online passport service."
+      "Make a compliant UK passport photo (35x45 mm, light grey background) free online. Correct head size, neutral expression checks, and export for the online passport service.",
+    faq: [
+      {
+        q: "What background does a UK passport photo need?",
+        a: "A plain light-coloured background — light grey or cream. Pure white is discouraged for UK photos; this tool offers a compliant Light Grey preset."
+      },
+      {
+        q: "What size is a UK passport photo?",
+        a: "35 x 45 mm for printed photos, with the head (chin to crown) between 29 and 34 mm. Digital photos for the online service follow the same proportions."
+      },
+      {
+        q: "Can I smile in a UK passport photo?",
+        a: "No — HM Passport Office requires a neutral expression with your mouth closed and eyes open, looking straight at the camera."
+      }
+    ]
   },
   {
     slug: "india",
@@ -79,7 +114,21 @@ export const countryGuides: CountryGuide[] = [
     ],
     title: "India Passport Photo Maker — 35x45 mm / 2x2 in, Free | Passport Photo Studio",
     description:
-      "Create a compliant Indian passport photo (35x45 mm or 2x2 in, white background) free online. Auto-crop, background removal, and print or digital export."
+      "Create a compliant Indian passport photo (35x45 mm or 2x2 in, white background) free online. Auto-crop, background removal, and print or digital export.",
+    faq: [
+      {
+        q: "What size is an Indian passport photo?",
+        a: "35 x 45 mm is standard within India; many consular services (including in the US) use 2 x 2 inches (51 x 51 mm). This tool supports both — pick the size your service asks for."
+      },
+      {
+        q: "Is a light blue background accepted for Indian passport photos?",
+        a: "Plain white is the safest and most widely required. Some services accept light blue — check your specific application; this tool defaults India to Bright White."
+      },
+      {
+        q: "Can I wear glasses in an Indian passport photo?",
+        a: "No — glasses should be removed, and caps or hats are not allowed. Religious head coverings are permitted if they don't obscure the face."
+      }
+    ]
   },
   {
     slug: "canada",
@@ -100,7 +149,21 @@ export const countryGuides: CountryGuide[] = [
     ],
     title: "Canada Passport Photo Maker — 50x70 mm, Free Online | Passport Photo Studio",
     description:
-      "Make a compliant Canadian passport photo (50x70 mm, white background, 31–36 mm head) free online. Auto-crop, background removal, and print-ready export."
+      "Make a compliant Canadian passport photo (50x70 mm, white background, 31–36 mm head) free online. Auto-crop, background removal, and print-ready export.",
+    faq: [
+      {
+        q: "What size is a Canadian passport photo?",
+        a: "50 x 70 mm — larger than most countries — with the face measuring 31 to 36 mm from chin to crown."
+      },
+      {
+        q: "Do Canadian passport photos need a date stamp?",
+        a: "Printed photos must show the name and address of the photographer or studio and the date taken, usually stamped or written on the back."
+      },
+      {
+        q: "Can I take a Canadian passport photo at home?",
+        a: "Yes for the photo itself — use even lighting and a plain white background (this tool sets both). If you print at home, remember the back-of-photo information requirement."
+      }
+    ]
   },
   {
     slug: "australia",
@@ -121,7 +184,21 @@ export const countryGuides: CountryGuide[] = [
     ],
     title: "Australia Passport Photo Maker — 35x45 mm, Free | Passport Photo Studio",
     description:
-      "Create a compliant Australian passport photo (35x45 mm, light background, 32–36 mm head) free online. Auto-crop, background removal, and export."
+      "Create a compliant Australian passport photo (35x45 mm, light background, 32–36 mm head) free online. Auto-crop, background removal, and export.",
+    faq: [
+      {
+        q: "What size is an Australian passport photo?",
+        a: "35 x 45 mm, with the face measuring 32 to 36 mm from chin to crown."
+      },
+      {
+        q: "What background is required for Australian passport photos?",
+        a: "A plain light grey or white background with even lighting and no shadows. This tool can set either."
+      },
+      {
+        q: "Can I wear glasses in an Australian passport photo?",
+        a: "No — glasses are not permitted in Australian passport photos, even without glare."
+      }
+    ]
   },
   {
     slug: "schengen-visa",
@@ -142,7 +219,61 @@ export const countryGuides: CountryGuide[] = [
     ],
     title: "Schengen & EU Visa Photo Maker — 35x45 mm, Free | Passport Photo Studio",
     description:
-      "Make a compliant Schengen visa / EU passport photo (35x45 mm, light grey background, ICAO 70–80% face) free online. Auto-crop, background removal, and export."
+      "Make a compliant Schengen visa / EU passport photo (35x45 mm, light grey background, ICAO 70–80% face) free online. Auto-crop, background removal, and export.",
+    faq: [
+      {
+        q: "What size is a Schengen visa photo?",
+        a: "35 x 45 mm, following the ICAO standard where the face fills about 70–80% of the photo height."
+      },
+      {
+        q: "Which countries accept the Schengen visa photo format?",
+        a: "All Schengen area countries (France, Germany, Italy, Spain, the Netherlands, and the rest) use the same 35x45 mm ICAO format, as do most EU passports."
+      },
+      {
+        q: "What background do Schengen visa photos need?",
+        a: "A plain light grey or off-white background. Strong white can lose face contour definition; this tool recommends Light Grey for Schengen applications."
+      }
+    ]
+  },
+  {
+    slug: "baby",
+    country: "Baby & infant",
+    standardLabel: "US 2x2 in",
+    sizeText: "Same size as an adult photo for the destination country",
+    background: "Plain white — lay the baby on a white blanket or car seat cover",
+    headHeight: "Relaxed for infants — centered and fully visible is what matters",
+    resolution: "Sharp, evenly lit, no hands or objects visible",
+    intro:
+      "Baby passport photos are the hardest to get accepted — but the rules are more relaxed than most parents think: infants may have their eyes closed, no neutral expression is required, and a photo taken lying on a plain white blanket is fine. This tool has a dedicated Baby mode that eases the eyes-open, expression, and head-size checks while still producing the exact size your country requires.",
+    rules: [
+      "Lay your baby on a plain white blanket or sheet, or cover a car seat with one.",
+      "No hands or pacifiers visible — support the head with a hidden hand under the blanket if needed.",
+      "Eyes may be closed for newborns; no neutral-expression requirement for infants.",
+      "Even, soft lighting — avoid one-sided window shadows across the face.",
+      "The photo size and background rules still follow the destination country (e.g. US 2x2 in, white)."
+    ],
+    title: "Baby Passport Photo Maker — Infant Rules + At-Home Guide | Passport Photo Studio",
+    description:
+      "Take a baby passport photo at home for free. Infant rules explained (eyes closed OK, no expression rule), plus a Baby mode that relaxes the checks and exports the exact size.",
+    faq: [
+      {
+        q: "Can a baby's eyes be closed in a passport photo?",
+        a: "For newborns and young infants, yes — most authorities (including the US) accept closed or partially open eyes for babies."
+      },
+      {
+        q: "Can I hold my baby for the passport photo?",
+        a: "You can't be visible in the photo. Lay the baby on a plain white blanket, or support them with a hand hidden under the blanket, and shoot from directly above."
+      },
+      {
+        q: "Does my baby need a neutral expression?",
+        a: "No — infants are exempt from the neutral-expression rule. An open mouth or a cry won't automatically reject a baby photo."
+      },
+      {
+        q: "What size is a baby passport photo?",
+        a: "The same as an adult photo for your country (e.g. 2x2 in for the US, 35x45 mm for the UK/EU). Only the pose and expression rules are relaxed, not the size."
+      }
+    ],
+    ctaHref: "/app?baby=1"
   }
 ];
 
