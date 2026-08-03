@@ -555,6 +555,10 @@ export default function ToolApp() {
     if (orderId) {
       setServerOrderId(orderId);
     }
+    // Deep-link from the baby guide (/app?baby=1): enable the relaxed infant compliance checks.
+    if (params.get("baby") === "1") {
+      setBabyMode(true);
+    }
     const pendingUploadRaw = localStorage.getItem("pps_pending_upload");
     if (pendingUploadRaw) {
       let cancelled = false;
@@ -599,7 +603,7 @@ export default function ToolApp() {
         cancelled = true;
       };
     }
-  }, [setCropOffset, setCropZoom, setStandardId]);
+  }, [setCropOffset, setCropZoom, setStandardId, setBabyMode]);
 
   useEffect(() => {
     const sourceUrl = outputUrl ?? livePreviewUrl;

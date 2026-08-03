@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
-import { countryGuides, getCountryGuide } from "@/lib/countryGuides";
+import { countryGuides, getCountryGuide, type CountryGuide as CountryGuideData } from "@/lib/countryGuides";
 
 type CountryGuideProps = {
   slug: string;
@@ -32,6 +32,56 @@ function useDocumentMeta(title: string, description: string) {
   }, [title, description]);
 }
 
+// Inject FAQPage + HowTo structured data for Google rich results (removed on unmount for SPA nav).
+function useStructuredData(guide: CountryGuideData | undefined) {
+  useEffect(() => {
+    if (!guide || typeof document === "undefined") return;
+    const payload = [
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: guide.faq.map((item) => ({
+          "@type": "Question",
+          name: item.q,
+          acceptedAnswer: { "@type": "Answer", text: item.a }
+        }))
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        name: `How to make a ${guide.country} passport photo online`,
+        totalTime: "PT2M",
+        estimatedCost: { "@type": "MonetaryAmount", currency: "USD", value: "0" },
+        step: [
+          {
+            "@type": "HowToStep",
+            name: "Take or upload a photo",
+            text: "Use your phone or webcam in even lighting, facing the camera, or upload an existing photo."
+          },
+          {
+            "@type": "HowToStep",
+            name: "Automatic crop and background",
+            text: `The tool aligns your face to the ${guide.sizeText} proportions, straightens the head, and replaces the background (${guide.background.toLowerCase()}).`
+          },
+          {
+            "@type": "HowToStep",
+            name: "Check compliance and export",
+            text: "Review the automated requirement checks, then download a digital file, a portal-ready JPG, or a print sheet."
+          }
+        ]
+      }
+    ];
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "country-guide-jsonld";
+    script.textContent = JSON.stringify(payload);
+    document.head.appendChild(script);
+    return () => {
+      script.remove();
+    };
+  }, [guide]);
+}
+
 export default function CountryGuide({ slug }: CountryGuideProps) {
   const guide = getCountryGuide(slug);
 
@@ -39,6 +89,7 @@ export default function CountryGuide({ slug }: CountryGuideProps) {
     guide?.title ?? "Passport Photo Maker | Passport Photo Studio",
     guide?.description ?? "Create compliant passport and visa photos free in your browser."
   );
+  useStructuredData(guide);
 
   if (!guide) {
     return (
@@ -64,7 +115,7 @@ export default function CountryGuide({ slug }: CountryGuideProps) {
     );
   }
 
-  const ctaHref = `/app?country=${encodeURIComponent(guide.standardLabel)}`;
+  const ctaHref = guide.ctaHref ?? `/app?country=${encodeURIComponent(guide.standardLabel)}`;
   const specs = [
     { label: "Photo size", value: guide.sizeText },
     { label: "Background", value: guide.background },
@@ -112,6 +163,18 @@ export default function CountryGuide({ slug }: CountryGuideProps) {
             Requirements can change — always confirm the latest rules with the official passport or visa authority
             before submitting.
           </p>
+        </section>
+
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold text-slate-900">Frequently asked questions</h2>
+          <div className="mt-4 grid gap-4">
+            {guide.faq.map((item) => (
+              <div key={item.q} className="rounded-2xl border border-slate-200 bg-white p-4">
+                <h3 className="text-sm font-semibold text-slate-900">{item.q}</h3>
+                <p className="mt-2 text-sm text-slate-600">{item.a}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="mt-10 rounded-3xl border border-slate-200 bg-slate-50 p-6">
