@@ -236,6 +236,7 @@ export default function ToolApp() {
   const [autoCrop, setAutoCrop] = useLocalStorage<boolean>("pps_auto_crop", true);
   const [autoStraighten, setAutoStraighten] = useLocalStorage<boolean>("pps_auto_straighten", true);
   const [babyMode, setBabyMode] = useLocalStorage<boolean>("pps_baby_mode", false);
+  const [fixLighting, setFixLighting] = useLocalStorage<boolean>("pps_fix_lighting", true);
   const [sheetFormatId, setSheetFormatId] = useLocalStorage<SheetFormatId>("pps_sheet_format", "4x6");
   const [manualAdjust, setManualAdjust] = useLocalStorage<boolean>("pps_manual_adjust", false);
   const [beforeAfterSplit, setBeforeAfterSplit] = useLocalStorage<number>("pps_before_after_split", 60);
@@ -816,6 +817,7 @@ export default function ToolApp() {
           qualityMode,
           autoStraighten,
           babyMode,
+          fixLighting,
           maxSize: INTERACTIVE_MAX_SIZE,
           maskThreshold: manualThreshold ? maskThreshold : undefined,
           birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null,
@@ -897,6 +899,7 @@ export default function ToolApp() {
     setLivePreview,
     autoStraighten,
     babyMode,
+    fixLighting,
     segCacheKey
   ]);
 
@@ -952,6 +955,7 @@ export default function ToolApp() {
           cropZoom: debouncedCropZoom,
           qualityMode,
           babyMode,
+          fixLighting,
           maxSize: 960,
           maskThreshold: manualThreshold ? maskThreshold : undefined,
           birefnetWorker: birefnetStatus.type === "ready" ? birefnetWorkerRef.current : null
@@ -1056,6 +1060,7 @@ export default function ToolApp() {
     retouchStrength,
     autoCrop,
     babyMode,
+    fixLighting,
     manualAdjust,
     debouncedCropOffset,
     debouncedCropZoom,
@@ -2051,6 +2056,15 @@ export default function ToolApp() {
                             <p className="text-xs text-slate-500">Levels a tilted head before cropping.</p>
                           </div>
                           <Switch checked={autoStraighten} onCheckedChange={setAutoStraighten} />
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold">Fix lighting</p>
+                            <p className="text-xs text-slate-500">Evens out one-sided face shadows.</p>
+                          </div>
+                          <Switch checked={fixLighting} onCheckedChange={setFixLighting} />
                         </div>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -3310,6 +3324,76 @@ const straightenToLevelEyes = (
   }
 };
 
+// Even out one-sided face shadow (a common rejection reason): measure mean luminance on the left
+// vs right half of the face and, when clearly unbalanced, lift the darker side with a soft
+// horizontal gain ramp. Mutates `data` in place. Only ever brightens (never darkens), the gain is
+// clamped, and the ramp spans the frame so there's no visible seam. The segmentation mask is
+// computed from the untouched working image, so this never affects the cutout.
+const evenOutFaceLighting = (
+  data: ImageData,
+  landmarks: Array<{ x: number; y: number }> | null | undefined,
+  width: number,
+  height: number
+): { applied: boolean; diff: number } => {
+  if (!landmarks || landmarks.length < 264) return { applied: false, diff: 0 };
+  const leftEye = landmarks[33];
+  const rightEye = landmarks[263];
+  const chin = landmarks[152];
+  if (!leftEye || !rightEye || !chin) return { applied: false, diff: 0 };
+  const cx = ((leftEye.x + rightEye.x) / 2) * width;
+  const cy = ((leftEye.y + rightEye.y) / 2) * height;
+  const eyeDist = Math.hypot((rightEye.x - leftEye.x) * width, (rightEye.y - leftEye.y) * height);
+  if (eyeDist < 8) return { applied: false, diff: 0 };
+  const span = Math.max(12, Math.round(eyeDist * 0.9));
+  const luma = (i: number) => 0.2126 * data.data[i] + 0.7152 * data.data[i + 1] + 0.0722 * data.data[i + 2];
+  // Measure two cheek patches anchored to the eye geometry (between the eye line and the jaw,
+  // centered half an eye-distance out from the face midline). A full-width band would include the
+  // hair on both sides, which is dark regardless of lighting and dilutes the skin difference.
+  const patchHalf = Math.max(6, Math.round(eyeDist * 0.28));
+  const yFrom = Math.max(0, Math.round(cy + eyeDist * 0.18));
+  const yTo = Math.min(height - 1, Math.min(Math.round(cy + eyeDist * 0.85), Math.round(chin.y * height)));
+  const patchMean = (patchCx: number) => {
+    let sum = 0;
+    let count = 0;
+    for (let y = yFrom; y <= yTo; y += 2) {
+      for (
+        let x = Math.max(0, Math.round(patchCx - patchHalf));
+        x <= Math.min(width - 1, Math.round(patchCx + patchHalf));
+        x += 2
+      ) {
+        sum += luma((y * width + x) * 4);
+        count += 1;
+      }
+    }
+    return count ? sum / count : 0;
+  };
+  const leftMean = patchMean(cx - eyeDist * 0.5);
+  const rightMean = patchMean(cx + eyeDist * 0.5);
+  if (!leftMean || !rightMean) return { applied: false, diff: 0 };
+  const diff = leftMean - rightMean;
+  // Below ~12 luma levels the imbalance isn't visible; skip to avoid churning good photos.
+  if (Math.abs(diff) < 12) return { applied: false, diff };
+  const darkIsRight = diff > 0;
+  const brightMean = Math.max(leftMean, rightMean);
+  const darkMean = Math.max(20, Math.min(leftMean, rightMean));
+  const gainMax = Math.min(1.35, brightMean / darkMean);
+  if (gainMax <= 1.02) return { applied: false, diff };
+  const rampHalf = span * 1.6;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const toward = darkIsRight ? x - cx : cx - x;
+      const t = Math.min(1, Math.max(0, (toward / rampHalf + 1) / 2));
+      const gain = 1 + (gainMax - 1) * t;
+      if (gain <= 1.004) continue;
+      const i = (y * width + x) * 4;
+      data.data[i] = Math.min(255, data.data[i] * gain);
+      data.data[i + 1] = Math.min(255, data.data[i + 1] * gain);
+      data.data[i + 2] = Math.min(255, data.data[i + 2] * gain);
+    }
+  }
+  return { applied: true, diff };
+};
+
 const processImage = async ({
   image,
   bundle,
@@ -3328,6 +3412,7 @@ const processImage = async ({
   autoCrop,
   autoStraighten,
   babyMode,
+  fixLighting,
   manualAdjust,
   cropOffset,
   cropZoom,
@@ -3355,6 +3440,7 @@ const processImage = async ({
   autoCrop: boolean;
   autoStraighten?: boolean;
   babyMode?: boolean;
+  fixLighting?: boolean;
   manualAdjust: boolean;
   cropOffset: { x: number; y: number };
   cropZoom: number;
@@ -3378,6 +3464,24 @@ const processImage = async ({
   let edgeMetrics: EdgeMetrics | undefined;
   let passportRequirements: PassportRequirementReport | undefined;
   const sourceImageData = toImageData(workingImage, imageWidth, imageHeight);
+  // Lighting fix runs on the pixel data only — segmentation reads workingImage separately, so the
+  // mask (and its cache) is unaffected by this correction.
+  if (fixLighting) {
+    try {
+      const lightingLandmarks = detectFace(bundle, workingImage).faceLandmarks?.[0];
+      const lighting = evenOutFaceLighting(sourceImageData, lightingLandmarks, imageWidth, imageHeight);
+      if (lighting.applied) {
+        backgroundWarnings.push({
+          id: "lighting_fixed",
+          level: "info",
+          title: "Lighting evened out",
+          detail: "One side of the face was darker than the other, so the shadow side was brightened."
+        });
+      }
+    } catch (error) {
+      console.warn("Lighting fix skipped", error);
+    }
+  }
   try {
     const threshold = maskThreshold ?? qualityMap[qualityMode].threshold;
     let built: ImageData | null = null;
